@@ -1,0 +1,49 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "scraper-engineer": {
+      "description": "Construit le moteur de scraping LinkedIn (Python/Playwright/Rust)",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "prompt": "{file:.opencode/agents/scraper-engineer.md}",
+      "temperature": 0.2,
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "pipeline-architect": {
+      "description": "Pipeline d'enrichissement, IA Layer & Supabase",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "prompt": "{file:.opencode/agents/pipeline-architect.md}",
+      "temperature": 0.2,
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "frontend-artisan": {
+      "description": "Interface Next.js avec design Zen-Tech",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "prompt": "{file:.opencode/agents/frontend-artisan.md}",
+      "temperature": 0.3,
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "devops-automator": {
+      "description": "Alertes, webhooks, CI/CD & polissage",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-20250514",
+      "prompt": "{file:.opencode/agents/devops-automator.md}",
+      "temperature": 0.2,
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    }
+  }
+}

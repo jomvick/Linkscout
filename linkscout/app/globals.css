@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --c-canvas: #F8F9FB;
+  --c-surface: #FFFFFF;
+  --c-text-primary: #0B0D11;
+  --c-text-secondary: #6B7280;
+  --c-border: #E8EAED;
+  --c-brand-light: #E8F0FE;
+  --c-amber-light: #FEF3C7;
+  --c-emerald-light: #D1FAE5;
+  --c-accent: #6366F1;
+}
+
+.dark {
+  --c-canvas: #0B0D11;
+  --c-surface: #16181D;
+  --c-text-primary: #E8EAED;
+  --c-text-secondary: #6B7280;
+  --c-border: #272A30;
+  --c-brand-light: #1A2D4A;
+  --c-amber-light: #3D2E00;
+  --c-emerald-light: #0D3D1A;
+  --c-accent: #818CF8;
+}
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-canvas: var(--c-canvas);
+  --color-surface: var(--c-surface);
+  --color-brand: #2563EB;
+  --color-brand-hover: #1D4ED8;
+  --color-brand-light: var(--c-brand-light);
+  --color-text-primary: var(--c-text-primary);
+  --color-text-secondary: var(--c-text-secondary);
+  --color-border: var(--c-border);
+  --color-match-high: #10B981;
+  --color-match-mid: #F59E0B;
+  --color-match-low: #6B7280;
+  --color-accent: var(--c-accent);
+
+  --color-sidebar: #13151A;
+  --color-sidebar-hover: #1C1E24;
+  --color-sidebar-active: #2563EB;
+}
+
+@layer base {
+  html {
+    scroll-behavior: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background: var(--c-canvas);
+    color: var(--c-text-primary);
+    font-family: var(--font-sans);
+  }
+
+  ::selection {
+    background: #2563EB20;
+  }
+
+  .dark ::selection {
+    background: #2563EB40;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--c-border);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--c-text-secondary);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
