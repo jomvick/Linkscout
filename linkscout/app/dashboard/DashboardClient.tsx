@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiAnalyze } from "@/lib/api-client";
@@ -15,9 +15,9 @@ import AlertsView from "@/components/AlertsView";
 import HistoryView from "@/components/HistoryView";
 import SettingsView from "@/components/SettingsView";
 import CommandPalette from "@/components/CommandPalette";
-import FilterChips from "@/components/FilterChips";
 import FirstUseWizard from "@/components/FirstUseWizard";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import AdvancedFilters, { FilterState } from "@/components/AdvancedFilters";
 
 type View = "dashboard" | "favorites" | "alerts" | "history" | "settings";
 
@@ -171,27 +171,15 @@ export default function DashboardClient() {
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q") || "";
   const [searchValue, setSearchValue] = useState(urlQuery || query);
-  const [activeFilter, setActiveFilter] = useState<FilterLabel>("Tous");
+  const [filters, setFilters] = useState<FilterState>({
+    providers: ["linkedin_guest", "wttj", "indeed"],
+    contractTypes: ["cdi", "freelance", "cdd", "stage"],
+    remotes: ["full_remote", "hybrid", "on_site"],
+  });
+  const [showFilters, setShowFilters] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const { showWizard, completeOnboarding, hasDoneFirstSearch, onFirstSearch } =
     useFirstUse();
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setCmdOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-  useEffect(() => {
-    if (hasDoneFirstSearch && jobs.length === 0 && searchValue) {
-      searchJobs(searchValue);
-    }
-  }, [hasDoneFirstSearch]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -231,6 +219,8 @@ export default function DashboardClient() {
             verdict_ai: a.verdict_ai || null,
             salary: a.salary || null,
             contract_type: a.contract_type || null,
+            remote_policy: a.remote_policy || null,
+            seniority: a.seniority || null,
             location: a.location || null,
             status: a.status || "enriched",
           });
@@ -242,23 +232,8 @@ export default function DashboardClient() {
       }
       setAnalyzing(false);
     },
-    [query, resumeText, isAuthed, router, setAnalyzing],
+    [query, resumeText, isAuthed, router, setAnalyzing, refreshStats, setSelected, selected],
   );
-
-  const firstJobRef = useRef(false);
-  useEffect(() => {
-    if (
-      hasDoneFirstSearch &&
-      jobs.length > 0 &&
-      !selected &&
-      !firstJobRef.current
-    ) {
-      firstJobRef.current = true;
-      const first = jobs[0];
-      setSelected(first);
-      if (!first.summary) handleAnalyze(first);
-    }
-  }, [hasDoneFirstSearch, jobs, handleAnalyze]);
 
   const handleSelect = useCallback(
     (job: Job) => {
@@ -280,22 +255,67 @@ export default function DashboardClient() {
     [setView],
   );
 
-  const filteredJobs = jobs.filter((j) => matchesFilter(j, activeFilter));
+
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const filteredJobs = useMemo(() => jobs.filter((job) => {
+    const pMatch = filters.providers.includes(job.source || "linkedin_guest");
+    const cMatch = filters.contractTypes.length === 0 || filters.contractTypes.some(c => (job.contract_type || "cdi").toLowerCase().includes(c));
+    return pMatch && cMatch;
+  }), [jobs, filters]);
+
+  const sortedJobs = useMemo(() => {
+    const jobsCopy = [...filteredJobs];
+    if (isAuthed) {
+      // User connected: Sort by match_score descending (most coherent first)
+      return jobsCopy.sort((a, b) => {
+        const scoreA = a.match_score ?? -1;
+        const scoreB = b.match_score ?? -1;
+        return scoreB - scoreA;
+      });
+    } else {
+      // User not connected: Random display (pseudo-random stable sort based on ID)
+      return jobsCopy.sort((a, b) => {
+        const hashA = a.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const hashB = b.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        return (hashA % 13) - (hashB % 13);
+      });
+    }
+  }, [filteredJobs, isAuthed]);
 
   const renderView = () => {
     switch (view) {
       case "dashboard":
         return (
           <div className="flex flex-col flex-1 overflow-hidden" key="dashboard">
-            <div className="shrink-0 px-4 py-2.5 border-b border-border/40 bg-surface/50">
-              <FilterChips
-                chips={FILTERS.map((f) => ({ id: f.id, label: f.label }))}
-                active={activeFilter}
-                onChange={(id) => setActiveFilter(id as FilterLabel)}
+            <div className="shrink-0 px-4 py-3 border-b border-border/40 bg-surface/50 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-text-secondary">Filtres</span>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="text-xs font-medium text-brand hover:underline"
+                >
+                  {showFilters ? "Masquer les filtres avancés" : "Afficher les filtres avancés"}
+                </button>
+              </div>
+              <AdvancedFilters
+                isOpen={showFilters}
+                filters={filters}
+                onChange={setFilters}
               />
             </div>
             <SearchView
-              jobs={filteredJobs}
+              jobs={sortedJobs}
               selected={selected}
               onSelect={handleSelect}
               onCloseDetail={() => setSelected(null)}
