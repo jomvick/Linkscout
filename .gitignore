@@ -8,3 +8,27 @@ venv/
 .venv/
 target/
 .DS_Store
+
+# Build artifacts
+*.tsbuildinfo
+*.tsbuildinfo.*
+*.coverage
+*.coverage.*
+
+# Supabase local temp
+supabase/.temp/
+
+# Python
+*.egg-info/
+dist/
+build/
+*.so
+
+# Rust
+worker-rs/target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linkscout
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: linkscout/package-lock.json
+      - run: npm ci
+      - run: npm run test -- --run
+      - run: npm run build
+
+  scraper:
+    name: Scraper (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scraper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scraper/requirements-test.txt
+      - run: pip install -r requirements-test.txt
+      - run: python -m pytest tests/ -v
+
+  worker:
+    name: Worker (Rust)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+      - run: cargo build --verbose
+      - run: cargo test --verbose
