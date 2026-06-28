@@ -34,6 +34,9 @@ Règles:
 - Priorise les termes en anglais car c'est le standard sur LinkedIn.
 - Retourne UNIQUEMENT un JSON valide: { "keywords": ["keyword1", "keyword2"], "intent": "résumé de l'intention en 1 phrase" }`;
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     const resp = await fetch(GROQ_URL, {
       method: "POST",
       headers: {
@@ -50,7 +53,9 @@ Règles:
         temperature: 0.1,
         max_tokens: 256,
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!resp.ok) {
       const errBody = await resp.text();

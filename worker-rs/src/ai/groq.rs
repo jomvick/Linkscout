@@ -4,6 +4,7 @@ use crate::models::job::{GeneratedPitch, JobAnalysis, ScoreBreakdown};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::Value;
+use tokio::time::{timeout, Duration};
 
 const GROQ_URL: &str = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL: &str = "llama-3.3-70b-versatile";
@@ -40,17 +41,19 @@ impl GroqProvider {
             body["response_format"] = serde_json::json!({"type": "json_object"});
         }
 
-        let resp = match self
-            .http
-            .post(GROQ_URL)
+        let resp = match timeout(Duration::from_secs(25), self.http.post(GROQ_URL)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .json(&body)
-            .send()
+            .send())
             .await
         {
-            Ok(r) => r,
-            Err(e) => {
+            Ok(Ok(r)) => r,
+            Ok(Err(e)) => {
                 tracing::error!("Groq API request failed: {}", e);
+                return None;
+            }
+            Err(_) => {
+                tracing::error!("Groq API request timed out after 25s");
                 return None;
             }
         };
