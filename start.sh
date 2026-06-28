@@ -12,6 +12,8 @@ cd "$ROOT_DIR/worker-rs"
 cargo build --release 2>&1 | tail -1
 
 echo "[2/2] Lancement du backend (port 8001)..."
+kill $(lsof -t -i:8001) 2>/dev/null || true
+sleep 0.5
 ./target/release/linkscout-worker &
 WORKER_PID=$!
 
