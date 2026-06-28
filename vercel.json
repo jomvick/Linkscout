@@ -1,8 +1,6 @@
 {
   "framework": "nextjs",
-  "rootDirectory": "linkscout",
   "installCommand": "npm ci",
   "buildCommand": "next build",
-  "outputDirectory": ".next",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD . 2>/dev/null || echo 'deploy'"
+  "outputDirectory": ".next"
 }
