@@ -169,7 +169,7 @@ export default function Topbar({
     : null;
 
   return (
-    <header className="relative z-[100] shrink-0 border-b border-border bg-surface/90 backdrop-blur-xl supports-backdrop-blur:bg-surface/80">
+    <header className="sticky top-0 z-10 shrink-0 border-b border-border bg-surface/90 backdrop-blur-xl supports-backdrop-blur:bg-surface/80">
       <div className="flex h-14 items-center gap-3 px-5">
         {/* Search bar */}
         <form onSubmit={onSubmit} className="flex-1 max-w-xl min-w-0">
