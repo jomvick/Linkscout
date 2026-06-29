@@ -1,5 +1,4 @@
 {
-  "rootDirectory": "linkscout",
   "framework": "nextjs",
   "installCommand": "npm ci",
   "buildCommand": "next build",
