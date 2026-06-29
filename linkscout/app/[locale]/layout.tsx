@@ -25,8 +25,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: t("dashboardDesc"),
     metadataBase: new URL("https://linkscout-rust.vercel.app"),
     icons: {
-      icon: "/favicon.ico",
-      apple: "/apple-touch-icon.png",
+      icon: "/icon.svg",
+      apple: "/apple-icon.svg",
     },
     robots: {
       index: true,
