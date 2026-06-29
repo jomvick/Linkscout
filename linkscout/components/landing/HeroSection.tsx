@@ -346,7 +346,7 @@ export default function HeroSection() {
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="shrink-0 flex items-center gap-2 rounded-xl bg-indigo-50/80 px-3 py-2 text-xs font-medium text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400"
+                      className="shrink-0 flex items-center gap-2 rounded-xl bg-indigo-50/80 px-3 py-3 text-xs font-medium text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400"
                     >
                       <span className="w-3.5 h-3.5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin dark:border-indigo-500/30 dark:border-t-indigo-400" />
                       <span className="truncate max-w-[80px] sm:max-w-[120px]">{cvName}</span>
@@ -357,7 +357,7 @@ export default function HeroSection() {
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="shrink-0 flex items-center gap-1.5 rounded-xl border border-indigo-200/60 bg-indigo-50/80 px-2.5 py-1.5 text-xs font-medium text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-300"
+                      className="shrink-0 flex items-center gap-1.5 rounded-xl border border-indigo-200/60 bg-indigo-50/80 px-2.5 py-1.5 text-xs font-medium text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-300 min-h-[48px]"
                     >
                       <svg className="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -380,7 +380,7 @@ export default function HeroSection() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="shrink-0 rounded-xl border border-border/60 px-3 py-2 text-slate-400 hover:border-brand/40 hover:text-brand hover:bg-brand/5 transition-all dark:border-slate-700 dark:hover:border-brand/50 dark:hover:text-brand-300"
+                      className="shrink-0 rounded-xl border border-border/60 px-3 text-slate-400 hover:border-brand/40 hover:text-brand hover:bg-brand/5 transition-all dark:border-slate-700 dark:hover:border-brand/50 dark:hover:text-brand-300 min-h-[48px] min-w-[48px] flex items-center justify-center"
                       title={t('attachResume')}
                     >
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -395,7 +395,7 @@ export default function HeroSection() {
                   <button
                     type="submit"
                     disabled={loading || (!query.trim() && cvStatus !== "success")}
-                    className="shrink-0 rounded-xl bg-brand px-5 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.97]"
+                    className="shrink-0 rounded-xl bg-brand px-5 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.97] min-h-[48px] flex items-center justify-center"
                   >
                     {loading ? (
                       <span className="flex items-center gap-2">
@@ -439,7 +439,7 @@ export default function HeroSection() {
                   key={key}
                   onClick={() => handleSearch(trendLabel)}
                   disabled={loading}
-                  className="rounded-lg border border-border bg-surface px-4 py-2 text-[11px] text-slate-500 dark:text-zinc-400 hover:border-brand/40 hover:text-brand transition-all disabled:opacity-40 min-h-[40px] flex items-center"
+                  className="rounded-lg border border-border bg-surface px-4 text-[11px] text-slate-500 dark:text-zinc-400 hover:border-brand/40 hover:text-brand transition-all disabled:opacity-40 min-h-[48px] flex items-center justify-center"
                 >
                   {trendLabel}
                 </button>

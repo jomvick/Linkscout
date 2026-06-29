@@ -40,7 +40,7 @@ export default async function Home({ params }: HomeProps) {
       />
       <div className="relative min-h-screen bg-canvas text-text-primary transition-colors duration-300">
       {/* ── Background (Linear-inspired) ── */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
         <div
           className="absolute inset-0 opacity-[0.3] dark:opacity-[0.15]"
           style={{
@@ -54,10 +54,10 @@ export default async function Home({ params }: HomeProps) {
       </div>
 
       {/* HEADER */}
-      <Navbar />
+      <header><Navbar /></header>
 
       {/* HERO */}
-      <HeroSection />
+      <main id="main-content"><HeroSection />
 
       {/* DASHBOARD PREVIEW */}
       <div className="relative">
@@ -175,6 +175,7 @@ export default async function Home({ params }: HomeProps) {
       <section id="stats"><TimelineSection /></section>
 
       {/* CTA & FOOTER */}
+      </main>
       <FooterCTA />
     </div>
     </>

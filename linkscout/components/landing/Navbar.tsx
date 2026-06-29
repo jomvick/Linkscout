@@ -66,7 +66,7 @@ export function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="text-sm font-normal text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors duration-200 min-h-[48px] flex items-center"
+                  className="text-sm font-normal text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center"
                 >
                   {t('login')}
                 </Link>
