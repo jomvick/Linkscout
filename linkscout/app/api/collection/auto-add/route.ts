@@ -8,6 +8,7 @@ const addSchema = z.object({
   minScore: z.number().min(0).max(100).default(80),
 });
 
+/** Auto-bookmark a high-score job to the user's collection (internal, gated by x-api-key). */
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServiceClient();

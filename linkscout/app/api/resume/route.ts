@@ -9,7 +9,8 @@ export async function POST(req: NextRequest) {
       error: authErr,
     } = await supabase.auth.getUser();
     if (authErr) {
-      return NextResponse.json({ error: `Auth error: ${authErr.message}` }, { status: 401 });
+      console.error("[Resume] Auth error:", authErr.message);
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -51,23 +52,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Upsert error: ${error.message}`, details: error }, { status: 500 });
     }
 
-    // Fire-and-forget to worker for processing
+    // Fire-and-forget to worker for processing with retry
     const { data: sessionData } = await supabase.auth.getSession();
     const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || "http://localhost:8001";
     const accessToken = sessionData.session?.access_token;
     if (accessToken) {
-      fetch(`${workerUrl}/resume/process`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          resume_id: data.id,
-          storage_path,
-          file_name,
-        }),
-      }).catch((err) => console.error("Worker fire-and-forget failed:", err));
+      notifyWorkerWithRetry(workerUrl, accessToken, { resume_id: data.id, storage_path, file_name });
     }
 
     return NextResponse.json({
@@ -129,4 +119,33 @@ export async function DELETE() {
   }
 
   return NextResponse.json({ success: true });
+}
+
+async function notifyWorkerWithRetry(
+  workerUrl: string,
+  accessToken: string,
+  body: Record<string, unknown>,
+  maxRetries = 3,
+): Promise<void> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(`${workerUrl}/resume/process`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return;
+      const text = await res.text().catch(() => "");
+      console.warn(`[Resume] Worker notify attempt ${attempt + 1} failed (${res.status}): ${text.slice(0, 200)}`);
+    } catch (err) {
+      console.warn(`[Resume] Worker notify attempt ${attempt + 1} error:`, err);
+    }
+    if (attempt < maxRetries - 1) {
+      await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+    }
+  }
+  console.error(`[Resume] Worker notify failed after ${maxRetries} attempts`);
 }

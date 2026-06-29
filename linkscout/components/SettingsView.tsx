@@ -232,8 +232,8 @@ export default function SettingsView() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f) handleFile(f);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
   };
 
   const handleDeleteResume = async () => {
@@ -305,10 +305,10 @@ export default function SettingsView() {
       ],
       { type: "application/json" },
     );
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `linkscout-export-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
+    const anchor = document.createElement("a");
+    anchor.href = URL.createObjectURL(blob);
+    anchor.download = `linkscout-export-${new Date().toISOString().split("T")[0]}.json`;
+    anchor.click();
   };
 
   const handleDeleteAccount = async () => {
@@ -486,8 +486,8 @@ export default function SettingsView() {
                     accept=".pdf,.txt"
                     className="hidden"
                     onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFile(f);
+                      const file = e.target.files?.[0];
+                      if (file) handleFile(file);
                     }}
                   />
                   <button
@@ -581,8 +581,8 @@ export default function SettingsView() {
                         accept=".pdf,.txt"
                         className="hidden"
                         onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) handleFile(f);
+                          const file = e.target.files?.[0];
+                          if (file) handleFile(file);
                         }}
                       />
                       <button

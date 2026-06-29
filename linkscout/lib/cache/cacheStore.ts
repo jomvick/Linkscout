@@ -7,7 +7,9 @@ interface CacheWrapper<T> {
 const CACHE_PREFIX = "linkscout_cache_";
 const LOCAL_PREFIX = "linkscout_local_";
 
+/** Client-side cache backed by sessionStorage and localStorage with TTL support. */
 export const cacheStore = {
+  /** Store a value in sessionStorage with a TTL (default 15 min). */
   setSession<T>(key: string, value: T, ttlInMinutes = 15): void {
     if (typeof window === "undefined") return;
     const data: CacheWrapper<T> = {
@@ -20,6 +22,7 @@ export const cacheStore = {
     } catch { /* quota exceeded — ignore */ }
   },
 
+  /** Retrieve a sessionStorage value; returns null if expired or missing. */
   getSession<T>(key: string): T | null {
     if (typeof window === "undefined") return null;
     const raw = sessionStorage.getItem(`${CACHE_PREFIX}${key}`);
@@ -42,6 +45,7 @@ export const cacheStore = {
     sessionStorage.removeItem(`${CACHE_PREFIX}${key}`);
   },
 
+  /** Persist a value in localStorage (no TTL — survives sessions). */
   setLocal<T>(key: string, value: T): void {
     if (typeof window === "undefined") return;
     try {
@@ -49,6 +53,7 @@ export const cacheStore = {
     } catch { /* quota exceeded — ignore */ }
   },
 
+  /** Retrieve a localStorage value. */
   getLocal<T>(key: string): T | null {
     if (typeof window === "undefined") return null;
     const raw = localStorage.getItem(`${LOCAL_PREFIX}${key}`);
@@ -65,6 +70,7 @@ export const cacheStore = {
     localStorage.removeItem(`${LOCAL_PREFIX}${key}`);
   },
 
+  /** Clear all cached entries from both sessionStorage and localStorage. */
   clearAll(): void {
     if (typeof window === "undefined") return;
     const clean = (storage: Storage, prefix: string) => {

@@ -20,7 +20,7 @@ interface TopbarProps {
 const NAV_LINKS = [
   {
     view: "settings" as const,
-    label: "Paramètres",
+    label: "Settings",
     icon: (
       <svg
         className="h-4 w-4"
@@ -44,7 +44,7 @@ const NAV_LINKS = [
   },
   {
     view: "favorites" as const,
-    label: "Favoris",
+    label: "Favorites",
     icon: (
       <svg
         className="h-4 w-4"
@@ -63,7 +63,7 @@ const NAV_LINKS = [
   },
   {
     view: "alerts" as const,
-    label: "Alertes",
+    label: "Alerts",
     icon: (
       <svg
         className="h-4 w-4"
@@ -82,7 +82,7 @@ const NAV_LINKS = [
   },
   {
     view: "history" as const,
-    label: "Historique",
+    label: "History",
     icon: (
       <svg
         className="h-4 w-4"
@@ -216,14 +216,14 @@ export default function Topbar({
         </form>
 
         {/* Right actions */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="relative z-40 flex items-center gap-2 ml-auto">
           {/* Theme toggle */}
           <button
             type="button"
             onClick={toggle}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-text-secondary/50 hover:text-text-primary hover:border-border transition-colors"
-            aria-label={
-              isDark ? "Activer le mode clair" : "Activer le mode sombre"
+              aria-label={
+              isDark ? "Switch to light mode" : "Switch to dark mode"
             }
           >
             {isDark ? (
@@ -264,7 +264,7 @@ export default function Topbar({
             <button
               type="button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              aria-label="Menu utilisateur"
+              aria-label="User menu"
               aria-expanded={dropdownOpen}
               className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ring-2 transition-all outline-none cursor-pointer select-none ${
                 user
@@ -292,7 +292,7 @@ export default function Topbar({
             </button>
 
             {dropdownOpen && (
-              <div className="fixed right-5 top-14 mt-1 w-72 origin-top-right rounded-2xl border border-border bg-surface shadow-2xl shadow-black/10 dark:shadow-black/40 ring-1 ring-black/5 dark:ring-white/5 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute right-0 top-full mt-2 w-72 origin-top-right rounded-2xl border border-border bg-surface shadow-2xl shadow-black/10 dark:shadow-black/40 ring-1 ring-black/5 dark:ring-white/5 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                 {user ? (
                   <>
                     {/* ── User Info ── */}
@@ -306,12 +306,12 @@ export default function Topbar({
                         </p>
                         {memberSince && (
                           <p className="text-[11px] text-text-secondary/50 mt-0.5">
-                            Membre depuis {memberSince}
+                            Member since {memberSince}
                           </p>
                         )}
                       </div>
                       <span className="shrink-0 rounded-full border border-brand/20 bg-brand/8 px-2 py-0.5 text-[10px] font-semibold text-brand">
-                        Gratuit
+                        Free
                       </span>
                     </div>
 
@@ -368,7 +368,7 @@ export default function Topbar({
                             )}
                           </span>
                           <span className="text-sm text-text-primary/80">
-                            {isDark ? "Mode sombre" : "Mode clair"}
+                            {isDark ? "Dark mode" : "Light mode"}
                           </span>
                         </div>
                         <button
@@ -409,7 +409,7 @@ export default function Topbar({
                             d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                           />
                         </svg>
-                        Déconnexion
+                        Sign out
                       </button>
                     </div>
                   </>
@@ -417,7 +417,7 @@ export default function Topbar({
                   /* ── Guest state ── */
                   <div className="p-3 space-y-1">
                     <p className="px-3 py-2 text-xs text-text-secondary/50">
-                      Connecte-toi pour accéder à toutes les fonctionnalités.
+                      Sign in to unlock all features.
                     </p>
                     <a
                       href="/login"
@@ -436,7 +436,7 @@ export default function Topbar({
                           d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
                         />
                       </svg>
-                      Se connecter
+                      Sign in
                     </a>
                   </div>
                 )}

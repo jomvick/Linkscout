@@ -26,6 +26,7 @@ function getState(): Store {
   return globalThis.__linkscout_store;
 }
 
+/** Return a copy of all jobs currently in the in-memory store. */
 export function getJobs(): Job[] {
   return [...getState().jobs];
 }
@@ -47,6 +48,7 @@ function findJobIndex(state: Store, job: JobDraft): number {
   );
 }
 
+/** Upsert an array of jobs. Existing matches (by id, url, or title+company) are merged. */
 export function addJobs(newJobs: JobDraft[]): Job[] {
   const state = getState();
   const upserted: Job[] = [];
@@ -81,6 +83,7 @@ export function addJobs(newJobs: JobDraft[]): Job[] {
   return upserted;
 }
 
+/** Update a single job's fields by id. Returns the updated job or null if not found. */
 export function updateJob(id: string, fields: Partial<Job>): Job | null {
   const state = getState();
   const idx = state.jobs.findIndex((j) => j.id === id);
@@ -89,6 +92,7 @@ export function updateJob(id: string, fields: Partial<Job>): Job | null {
   return state.jobs[idx];
 }
 
+/** Return aggregate stats (total scraped, unique companies, last update time). */
 export function getStats() {
   const state = getState();
   const companies = new Set(state.jobs.map((j) => j.company).filter(Boolean));

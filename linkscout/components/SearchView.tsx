@@ -41,20 +41,20 @@ export default function SearchView({
             </svg>
           </div>
           <p className="text-base font-semibold text-text-primary mb-1">
-            Prêt à trouver des opportunités ?
+            Ready to find opportunities?
           </p>
           <p className="text-sm text-text-secondary/60 leading-relaxed mb-6">
-            Tapez un rôle, une techno ou un lieu dans la barre de recherche.
-            L'IA analysera chaque offre et vous donnera un score de match, un
-            résumé, et une estimation salariale.
+            Type a role, tech stack, or location in the search bar.
+            AI will analyze each offer and give you a match score, a
+            summary, and a salary estimate.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            {["Développeur React", "Data Engineer", "DevOps", "Product Designer"].map((suggestion) => (
+            {["React Developer", "Data Engineer", "DevOps", "Product Designer"].map((suggestion) => (
               <button
                 key={suggestion}
                 type="button"
                 onClick={() => onSuggestionSearch?.(suggestion)}
-                className="rounded-lg border border-border/60 bg-surface px-3.5 py-2 text-sm text-text-secondary/70 hover:border-brand/30 hover:text-brand hover:bg-brand/5 transition-all"
+                className="rounded-lg border border-border/60 bg-surface px-4 py-2 text-sm text-text-secondary/70 hover:border-brand/30 hover:text-brand hover:bg-brand/5 transition-all min-h-[40px] flex items-center"
               >
                 {suggestion}
               </button>

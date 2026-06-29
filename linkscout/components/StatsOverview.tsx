@@ -21,33 +21,38 @@ export default function StatsOverview() {
     }
   });
 
-  const totalContracts = Object.values(contractCounts).reduce((a, b) => a + b, 0);
+  const totalContracts = Object.values(contractCounts).reduce((sum, count) => sum + count, 0);
   const hasContractData = totalContracts > 0;
   const maxContractVal = Math.max(...Object.values(contractCounts), 1);
 
   const techCounts: Record<string, number> = {};
-  jobs.forEach(j => { if (j.tech_stack) j.tech_stack.forEach(t => { const c = t.trim(); if (c) techCounts[c] = (techCounts[c] || 0) + 1; }); });
+  jobs.forEach((job) => {
+    if (job.tech_stack) job.tech_stack.forEach((tech) => {
+      const techName = tech.trim();
+      if (techName) techCounts[techName] = (techCounts[techName] || 0) + 1;
+    });
+  });
   const displayTechs = Object.entries(techCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const hasTechData = displayTechs.length > 0;
-  const maxDisplayTechVal = hasTechData ? Math.max(...displayTechs.map(t => t[1] as number), 1) : 1;
+  const maxDisplayTechVal = hasTechData ? Math.max(...displayTechs.map((entry) => entry[1] as number), 1) : 1;
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-8 select-none">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold text-text-primary tracking-tight">
-          Aperçu
+          Overview
         </h2>
         <p className="text-xs text-text-secondary/60">
-          Métriques globales de votre recherche d'opportunités.
+          Global metrics for your job search.
         </p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Offres Indexées", value: stats.totalJobs.toLocaleString("fr"), sub: `${currentCount} offres chargées`, color: "bg-brand/10 text-brand" },
-          { label: "Entreprises", value: uniqueCompanies.toLocaleString("fr"), sub: "Diversité de sources", color: "bg-accent/10 text-accent" },
-          ...(avgMatchScore != null ? [{ label: "Score Moyen", value: `${avgMatchScore}%`, sub: "Compatibilité IA", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" }] : []),
-          { label: "Enrichies IA", value: String(analyzedCount), sub: "Offres analysées", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+          { label: "Jobs Indexed", value: stats.totalJobs.toLocaleString("en"), sub: `${currentCount} jobs loaded`, color: "bg-brand/10 text-brand" },
+          { label: "Companies", value: uniqueCompanies.toLocaleString("en"), sub: "Source diversity", color: "bg-accent/10 text-accent" },
+          ...(avgMatchScore != null ? [{ label: "Avg Score", value: `${avgMatchScore}%`, sub: "AI compatibility", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" }] : []),
+          { label: "AI-Enriched", value: String(analyzedCount), sub: "Jobs analyzed", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
         ].filter(Boolean).map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -66,8 +71,8 @@ export default function StatsOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {hasTechData && <div className="rounded-xl border border-border/60 bg-surface p-5 space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-text-primary">Technologies les plus demandées</h3>
-            <p className="text-[10px] text-text-secondary/50 mt-0.5">Extraction automatique par l'IA.</p>
+            <h3 className="text-sm font-semibold text-text-primary">Top Technologies</h3>
+            <p className="text-[10px] text-text-secondary/50 mt-0.5">Auto-extracted by AI.</p>
           </div>
           <div className="space-y-3">
             {displayTechs.map(([tech, count], i) => {
@@ -79,7 +84,7 @@ export default function StatsOverview() {
                       <span className="w-1 h-1 rounded-full bg-brand" />
                       {tech as string}
                     </span>
-                    <span className="font-mono text-text-secondary/50 text-[10px]">{count as number} offre{(count as number) !== 1 ? "s" : ""}</span>
+                    <span className="font-mono text-text-secondary/50 text-[10px]">{count as number} job{(count as number) !== 1 ? "s" : ""}</span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-canvas overflow-hidden">
                     <motion.div
@@ -97,8 +102,8 @@ export default function StatsOverview() {
 
         {hasContractData && <div className="rounded-xl border border-border/60 bg-surface p-5 space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-text-primary">Répartition des Contrats</h3>
-            <p className="text-[10px] text-text-secondary/50 mt-0.5">Types de postes identifiés.</p>
+            <h3 className="text-sm font-semibold text-text-primary">Contract Distribution</h3>
+            <p className="text-[10px] text-text-secondary/50 mt-0.5">Identified job types.</p>
           </div>
           <div className="space-y-3">
             {Object.entries(contractCounts).map(([type, count], i) => {
@@ -111,7 +116,7 @@ export default function StatsOverview() {
                       <span className={`w-1 h-1 rounded-full bg-gradient-to-r ${colors[i]}`} />
                       {type}
                     </span>
-                    <span className="font-mono text-text-secondary/50 text-[10px]">{count as number} poste{(count as number) !== 1 ? "s" : ""}</span>
+                    <span className="font-mono text-text-secondary/50 text-[10px]">{count as number} role{(count as number) !== 1 ? "s" : ""}</span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-canvas overflow-hidden">
                     <motion.div

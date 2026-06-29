@@ -19,9 +19,10 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
-use axum::http::{header, Method};
+use axum::http::{header, HeaderValue, Method};
+use axum::http::request::Parts as RequestParts;
 
 use crate::app_state::AppState;
 use crate::auth::supabase::AuthClient;
@@ -91,13 +92,17 @@ async fn main() {
             auth::supabase::optional_auth_middleware,
         ));
 
+    let cors_state = state.clone();
     let app = Router::new()
         .merge(api_strict)
         .merge(api_optional)
         .route("/health", get(health::handle))
         .layer(
             CorsLayer::new()
-                .allow_origin(Any)
+                .allow_origin(AllowOrigin::predicate(move |origin: &HeaderValue, _parts: &RequestParts| {
+                    let origin_str = origin.to_str().unwrap_or("");
+                    cors_state.config.cors_origin.iter().any(|allowed| allowed == origin_str)
+                }))
                 .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
                 .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT])
         )

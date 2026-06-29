@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "llama-3.3-70b-versatile";
+
+const intentInputSchema = z.object({
+  text: z.string().trim().min(3, "text doit contenir au moins 3 caractères"),
+});
+
+// LLM outputs are untrusted by definition — validate the shape before returning it.
+const llmOutputSchema = z.object({
+  keywords: z.array(z.string()).min(1).max(5),
+  intent: z.string().optional(),
+});
 
 /**
  * POST /api/intent
@@ -11,12 +22,26 @@ const MODEL = "llama-3.3-70b-versatile";
  * Converts a free-form user phrase ("je cherche un job React à Paris")
  * into 1-3 LinkedIn-ready search keywords to feed the scraper.
  */
+/** Convert free-form user text into LinkedIn-ready search keywords via Groq LLM. */
 export async function POST(req: NextRequest) {
   try {
-    const { text } = await req.json();
-    if (!text || typeof text !== "string" || text.trim().length < 3) {
-      return NextResponse.json({ error: "text is required" }, { status: 422 });
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
     }
+    const inputParse = intentInputSchema.safeParse(rawBody);
+    if (!inputParse.success) {
+      return NextResponse.json(
+        {
+          error: "Validation échouée",
+          details: inputParse.error.flatten().fieldErrors,
+        },
+        { status: 422 },
+      );
+    }
+    const text = inputParse.data.text;
 
     const groqKey = process.env.GROQ_API_KEY;
     if (!groqKey) {
@@ -67,23 +92,34 @@ Règles:
     const data = await resp.json();
     const content = data?.choices?.[0]?.message?.content ?? "";
 
-    let parsed: { keywords?: string[]; intent?: string } = {};
+    let rawParsed: unknown;
     try {
-      parsed = JSON.parse(
-        content.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "")
+      rawParsed = JSON.parse(
+        content.trim().replace(/^```json\n?/, "").replace(/\n?```$/, ""),
       );
     } catch {
       // Fallback if Groq returns malformed JSON
       return NextResponse.json({ keywords: [text.trim()], intent: text.trim(), fallback: true });
     }
 
-    const keywords: string[] = Array.isArray(parsed.keywords)
-      ? parsed.keywords.filter((k) => typeof k === "string" && k.trim()).slice(0, 3)
-      : [text.trim()];
+    const llmParse = llmOutputSchema.safeParse(rawParsed);
+    if (!llmParse.success) {
+      console.error("[Intent] LLM output failed schema:", llmParse.error.flatten());
+      return NextResponse.json({ keywords: [text.trim()], intent: text.trim(), fallback: true });
+    }
+
+    const keywords: string[] = llmParse.data.keywords
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0)
+      .slice(0, 3);
+
+    if (keywords.length === 0) {
+      return NextResponse.json({ keywords: [text.trim()], intent: text.trim(), fallback: true });
+    }
 
     return NextResponse.json({
       keywords,
-      intent: parsed.intent ?? text.trim(),
+      intent: llmParse.data.intent?.trim() || text.trim(),
       fallback: false,
     });
   } catch (err) {

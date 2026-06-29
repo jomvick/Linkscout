@@ -12,6 +12,7 @@ export const mapJobRecord = mapJob;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DbClient = SupabaseClient<any, any, any, any, any>;
 
+/** Resolve a Job from a payload (either inline job data or a DB lookup by jobId). */
 export async function resolveJobFromPayload(
   payload: UnknownRecord,
   maybeSupabase?: DbClient | null,
@@ -49,6 +50,7 @@ export async function resolveJobFromPayload(
   return getJobs().find((job) => job.id === jobId) ?? null;
 }
 
+/** Persist job field updates to Supabase (with fallback to in-memory store). */
 export async function persistJobUpdate(
   jobId: string | undefined,
   fields: Partial<Job>,

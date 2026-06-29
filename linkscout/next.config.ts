@@ -1,19 +1,24 @@
 import type { NextConfig } from "next";
+import { fileURLToPath } from "url";
+import path from "path";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: __dirname,
+
   images: {
     remotePatterns: [
-      // Clearbit company logos
       { protocol: "https", hostname: "logo.clearbit.com" },
-      // UI Avatars fallback
       { protocol: "https", hostname: "ui-avatars.com" },
-      // Generic CDN patterns
       { protocol: "https", hostname: "*.licdn.com" },
       { protocol: "https", hostname: "media.licdn.com" },
     ],
   },
 
-  // Suppress pdfjs-dist canvas warning (unused dep, kept for now)
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -23,4 +28,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

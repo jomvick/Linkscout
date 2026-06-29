@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiScrape, apiIntent, apiResumeKeywords, isNaturalLanguage } from "@/lib/api-client";
 import { mapJob } from "@/lib/job-mapper";
@@ -12,13 +13,7 @@ import SearchStatusLogs, { type StatusStep } from "@/components/landing/SearchSt
 import { useToast } from "@/lib/toast-context";
 import { createClient } from "@/lib/supabase/client";
 
-const TRENDS = [
-  "AI Engineer",
-  "Rust Europe",
-  "Next.js Freelance",
-  "Product Designer",
-  "DevOps Kubernetes",
-];
+const TREND_KEYS = ["trendAI", "trendRust", "trendNext", "trendDesigner", "trendDevOps"];
 
 export default function HeroSection() {
   const [query, setQuery] = useState("");
@@ -32,11 +27,12 @@ export default function HeroSection() {
     lastUpdate: number;
   } | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const t = useTranslations('Hero');
   const [searchSteps, setSearchSteps] = useState<StatusStep[]>([
-    { id: "discover", label: "Recherche des offres sur LinkedIn", status: "idle" },
-    { id: "extract", label: "Extraction des descriptions détaillées", status: "idle" },
-    { id: "analyze", label: "Analyse IA via Groq (scoring, résumé)", status: "idle" },
-    { id: "sync", label: "Synchronisation dans le Dashboard", status: "idle" },
+    { id: "discover", label: t('stepDiscover'), status: "idle" },
+    { id: "extract", label: t('stepExtract'), status: "idle" },
+    { id: "analyze", label: t('stepAnalyze'), status: "idle" },
+    { id: "sync", label: t('stepSync'), status: "idle" },
   ]);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,28 +123,25 @@ export default function HeroSection() {
     let stepLabels: [string, string, string, string];
 
     if (!trimmed && hasCv) {
-      // ── Path A: CV → auto-keywords ─────────────────────────────────────
       stepLabels = [
-        "Lecture des compétences extraites du CV",
-        "Recherche LinkedIn sur vos top skills",
-        "Analyse IA & calcul du Match Score",
-        "Synchronisation dans le Dashboard",
+        t('stepCvReading'),
+        t('stepCvSearch'),
+        t('stepCvAnalyze'),
+        t('stepSyncResults'),
       ];
     } else if (isNL) {
-      // ── Path C: natural language ────────────────────────────────────────
       stepLabels = [
-        "Interprétation de votre recherche par l'IA",
-        "Recherche des offres sur LinkedIn",
-        "Analyse IA & calcul du Match Score",
-        "Synchronisation dans le Dashboard",
+        t('stepNlInterpret'),
+        t('stepNlSearch'),
+        t('stepNlAnalyze'),
+        t('stepSyncResults'),
       ];
     } else {
-      // ── Path B: direct keyword (± CV) ──────────────────────────────────
       stepLabels = [
-        "Recherche des offres sur LinkedIn",
-        "Extraction des descriptions détaillées",
-        "Analyse IA via Groq (scoring, résumé)",
-        "Synchronisation dans le Dashboard",
+        t('stepDirectSearch'),
+        t('stepDirectExtract'),
+        t('stepDirectAnalyze'),
+        t('stepSyncResults'),
       ];
     }
 
@@ -173,14 +166,14 @@ export default function HeroSection() {
         // Path A: fetch CV skills
         const cvKw = await apiResumeKeywords();
         if (!cvKw.hasResume || cvKw.keywords.length === 0) {
-          setSearchError("Votre CV est encore en cours d'analyse — réessayez dans quelques secondes.");
+          setSearchError(t('resumeAnalyzing'));
           setLoading(false);
           stepTimers.forEach(clearTimeout);
           setSearchSteps((p) => p.map((s) => ({ ...s, status: "idle" as const })));
           return;
         }
         keywords = cvKw.keywords;
-        showToast(`🎯 Top skills détectés : ${keywords.join(" · ")}`, "success");
+        showToast(`🎯 Top skills detected: ${keywords.join(" · ")}`, "success");
       } else if (isNL) {
         // Path C: natural language interpretation
         const intent = await apiIntent(trimmed);
@@ -189,7 +182,7 @@ export default function HeroSection() {
         } else {
           keywords = intent.keywords;
           if (!intent.fallback) {
-            showToast(`🧠 IA : "${intent.intent}" → ${keywords.join(" · ")}`, "success");
+            showToast(`🧠 AI: "${intent.intent}" → ${keywords.join(" · ")}`, "success");
           }
         }
       } else {
@@ -239,7 +232,7 @@ export default function HeroSection() {
       }
 
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur inconnue";
+      const msg = err instanceof Error ? err.message : "Unknown error";
       setSearchError(msg);
       setSearchSteps((prev) =>
         prev.map((s) => ({ ...s, status: "idle" as const })),
@@ -268,9 +261,9 @@ export default function HeroSection() {
     <>
       <main
         id="hero"
-        className="mx-auto max-w-7xl px-6 flex flex-col items-center justify-center pt-20 pb-16"
+        className="mx-auto max-w-7xl px-6 flex flex-col items-center justify-center pt-14 pb-16 sm:pb-20"
       >
-        <div className="w-full max-w-2xl text-center space-y-6">
+        <div className="w-full max-w-3xl text-center space-y-6">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -285,28 +278,25 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-4xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-5xl leading-[1.15]"
+            className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.15]"
           >
-            Le moteur de recherche
-            <br />
-            d&apos;opportunités pour les profils tech.
+            {t('title')}
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-sm text-slate-400 dark:text-zinc-500 leading-relaxed max-w-lg mx-auto"
+            className="text-sm sm:text-base text-slate-400 dark:text-zinc-500 leading-relaxed max-w-xl mx-auto"
           >
-            Trouvez des offres. Comprenez-les avec l&apos;IA. Postulez plus
-            intelligemment.
+            {t('subtitle')}
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="relative"
+            className="relative max-w-2xl mx-auto"
           >
             <motion.div
               animate={{ opacity: isFocused ? 1 : 0, scale: isFocused ? 1 : 0.92 }}
@@ -315,8 +305,8 @@ export default function HeroSection() {
             />
 
             <form onSubmit={handleSubmit}>
-              <div className="relative rounded-2xl border border-border/80 bg-surface/90 backdrop-blur-xl shadow-xl shadow-slate-900/5 dark:shadow-black/30 transition-all duration-300 focus-within:border-brand/50 focus-within:shadow-lg focus-within:shadow-brand/5 focus-within:ring-1 focus-within:ring-brand/20">
-                <div className="flex h-17 items-center gap-3 px-5 sm:h-18">
+              <div className="relative rounded-2xl border border-border/60 bg-white/95 dark:bg-surface/95 backdrop-blur-xl shadow-2xl shadow-slate-900/10 dark:shadow-black/40 transition-all duration-300 focus-within:border-brand/60 focus-within:shadow-2xl focus-within:shadow-brand/10 focus-within:ring-1 focus-within:ring-brand/20 hover:shadow-2xl hover:shadow-slate-900/15 dark:hover:shadow-black/50">
+                <div className="flex h-14 items-center gap-2.5 px-4 sm:h-16">
                   <svg
                     className="w-5 h-5 shrink-0 text-slate-300 dark:text-zinc-600"
                     fill="none"
@@ -337,17 +327,19 @@ export default function HeroSection() {
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     onChange={(e) => { setQuery(e.target.value); setSearchError(""); }}
-                    placeholder="Que recherchez-vous ?"
-                    className="flex-1 bg-transparent text-base sm:text-lg text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-zinc-600 outline-none"
+                    placeholder={t('searchPlaceholder')}
+                    aria-label={t('searchAria')}
+                    className="flex-1 bg-transparent text-sm sm:text-base text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-zinc-600 outline-none"
                   />
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept=".pdf,.txt"
                     className="hidden"
+                    aria-label={t('uploadAria')}
                     onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadCv(f);
+                      const file = e.target.files?.[0];
+                      if (file) uploadCv(file);
                     }}
                   />
                   {cvStatus === "uploading" && (
@@ -375,7 +367,7 @@ export default function HeroSection() {
                         type="button"
                         onClick={() => { setCvStatus("idle"); setCvName(null); }}
                         className="ml-1 rounded-full p-0.5 text-indigo-400 hover:bg-indigo-200 hover:text-indigo-800 dark:text-indigo-500 dark:hover:bg-indigo-500/30 dark:hover:text-indigo-200 transition-colors"
-                        title="Retirer le CV"
+                        title={t('removeResume')}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -389,7 +381,7 @@ export default function HeroSection() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       className="shrink-0 rounded-xl border border-border/60 px-3 py-2 text-slate-400 hover:border-brand/40 hover:text-brand hover:bg-brand/5 transition-all dark:border-slate-700 dark:hover:border-brand/50 dark:hover:text-brand-300"
-                      title="Joindre votre CV"
+                      title={t('attachResume')}
                     >
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm3.656 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75z" />
@@ -410,7 +402,7 @@ export default function HeroSection() {
                         <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       </span>
                     ) : (
-                      "Rechercher"
+                      t('searchButton')
                     )}
                   </button>
                 </div>
@@ -435,40 +427,43 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-wrap justify-center gap-2 pt-1"
+            className="flex flex-wrap justify-center gap-1.5"
           >
             <span className="text-xs text-slate-400 dark:text-zinc-500 mr-1 self-center">
-              🔥
+              {t('trendsLabel')}
             </span>
-            {TRENDS.map((s) => (
-              <button
-                key={s}
-                onClick={() => handleSearch(s)}
-                disabled={loading}
-                className="rounded-xl border border-border bg-surface px-3.5 py-1.5 text-xs text-slate-500 dark:text-zinc-400 hover:border-brand/40 hover:text-brand transition-all disabled:opacity-40"
-              >
-                {s}
-              </button>
-            ))}
+            {TREND_KEYS.map((key) => {
+              const trendLabel = t(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleSearch(trendLabel)}
+                  disabled={loading}
+                  className="rounded-lg border border-border bg-surface px-4 py-2 text-[11px] text-slate-500 dark:text-zinc-400 hover:border-brand/40 hover:text-brand transition-all disabled:opacity-40 min-h-[40px] flex items-center"
+                >
+                  {trendLabel}
+                </button>
+              );
+            })}
           </motion.div>
 
-          {stats && (
+          {stats && stats.totalScraped > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.6 }}
-              className="flex items-center justify-center gap-10 pt-6"
+              className="flex items-center justify-center gap-10 pt-4"
             >
               <StatCard
                 value={Math.round(stats.totalScraped / 1000)}
                 suffix="K+"
-                label="Offres indexées"
+                label={t('statsJobs')}
               />
               <div className="h-8 w-px bg-border/60" />
               <StatCard
                 value={Math.round(stats.uniqueCompanies / 1000)}
                 suffix="K+"
-                label="Entreprises"
+                label={t('statsCompanies')}
               />
               <div className="h-8 w-px bg-border/60" />
               <div className="text-center">
@@ -477,7 +472,7 @@ export default function HeroSection() {
                   <span className="text-emerald-500">%</span>
                 </div>
                 <div className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                  Offres enrichies IA
+                  {t('statsAiEnriched')}
                 </div>
               </div>
             </motion.div>

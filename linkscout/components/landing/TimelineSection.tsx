@@ -11,8 +11,8 @@ const STEPS = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
     ),
-    title: "Recherche",
-    desc: "Exprimez votre besoin en langage naturel. Moteur de recherche intelligent qui comprend le contexte.",
+    title: "Search",
+    desc: "Express your need in natural language. An intelligent search engine that understands context.",
   },
   {
     icon: (
@@ -20,8 +20,8 @@ const STEPS = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
       </svg>
     ),
-    title: "Analyse IA",
-    desc: "Chaque offre est enrichie automatiquement : résumé, skills, salaire, type de contrat.",
+    title: "AI Analysis",
+    desc: "Every job is automatically enriched: summary, skills, salary, contract type.",
   },
   {
     icon: (
@@ -30,7 +30,7 @@ const STEPS = [
       </svg>
     ),
     title: "Matching",
-    desc: "Score de compatibilité instantané. Plus d'offres non pertinentes, plus de temps perdu.",
+    desc: "Instant compatibility score. No more irrelevant jobs, no more wasted time.",
   },
   {
     icon: (
@@ -38,8 +38,8 @@ const STEPS = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
       </svg>
     ),
-    title: "Postulation",
-    desc: "Message personnalisé généré par l'IA. Postulez plus intelligemment, pas plus vite.",
+    title: "Application",
+    desc: "AI-generated personalized message. Apply smarter, not faster.",
   },
 ];
 
@@ -56,14 +56,14 @@ export default function TimelineSection() {
     <section
       ref={sectionRef}
       id="parcours"
-      className="mx-auto max-w-7xl px-6 pb-24 scroll-mt-20"
+      className="mx-auto max-w-7xl px-6 pb-24 pt-16 scroll-mt-20"
     >
-      <div className="text-center max-w-3xl mx-auto space-y-4 mb-14">
+      <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
         <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-          Votre prochaine opportunité en 4 étapes
+          Your next opportunity in 4 steps
         </h2>
         <p className="text-sm text-slate-400 dark:text-zinc-500">
-          Du besoin à la candidature, LinkScout vous accompagne à chaque étape.
+          From need to application, LinkScout guides you every step of the way.
         </p>
       </div>
 

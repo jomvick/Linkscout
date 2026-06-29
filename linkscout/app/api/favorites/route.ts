@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+
+const favoriteSchema = z.object({
+  jobId: z.string().min(1, "jobId requis"),
+  action: z.enum(["add", "remove"]).optional().default("add"),
+});
 
 export async function GET() {
   try {
@@ -31,10 +37,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Session invalide." }, { status: 401 });
     }
 
-    const { jobId, action } = await request.json();
-    if (!jobId || typeof jobId !== "string") {
-      return NextResponse.json({ error: "jobId requis." }, { status: 400 });
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
     }
+    const parsed = favoriteSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Validation échouée",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+    const { jobId, action } = parsed.data;
 
     if (action === "remove") {
       await supabase

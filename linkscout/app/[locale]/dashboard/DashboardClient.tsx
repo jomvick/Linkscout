@@ -24,7 +24,7 @@ type View = "dashboard" | "favorites" | "alerts" | "history" | "settings";
 const NAV_ITEMS: { id: View; label: string; icon: React.ReactNode }[] = [
   {
     id: "dashboard",
-    label: "Recherche & Stats",
+    label: "Search & Stats",
     icon: (
       <svg
         className="w-4 h-4"
@@ -43,7 +43,7 @@ const NAV_ITEMS: { id: View; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "favorites",
-    label: "Favoris",
+    label: "Favorites",
     icon: (
       <svg
         className="w-4 h-4"
@@ -62,7 +62,7 @@ const NAV_ITEMS: { id: View; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "alerts",
-    label: "Alertes",
+    label: "Alerts",
     icon: (
       <svg
         className="w-4 h-4"
@@ -81,7 +81,7 @@ const NAV_ITEMS: { id: View; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "history",
-    label: "Historique",
+    label: "History",
     icon: (
       <svg
         className="w-4 h-4"
@@ -296,12 +296,12 @@ export default function DashboardClient() {
           <div className="flex flex-col flex-1 overflow-hidden" key="dashboard">
             <div className="shrink-0 px-4 py-3 border-b border-border/40 bg-surface/50 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-text-secondary">Filtres</span>
+                <span className="text-sm font-medium text-text-secondary">Filters</span>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className="text-xs font-medium text-brand hover:underline"
                 >
-                  {showFilters ? "Masquer les filtres avancés" : "Afficher les filtres avancés"}
+                  {showFilters ? "Hide advanced filters" : "Show advanced filters"}
                 </button>
               </div>
               <AdvancedFilters
@@ -446,7 +446,7 @@ export default function DashboardClient() {
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              <span>Paramètres</span>
+              <span>Settings</span>
             </button>
           </div>
         </nav>

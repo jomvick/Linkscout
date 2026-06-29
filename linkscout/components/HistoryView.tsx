@@ -27,11 +27,11 @@ function groupByDate(items: SearchHistory[]) {
   ];
 
   for (const item of items) {
-    const d = new Date(item.created_at);
-    if (d.toDateString() === today.toDateString()) groups[0].items.push(item);
-    else if (d.toDateString() === yesterday.toDateString())
+    const itemDate = new Date(item.created_at);
+    if (itemDate.toDateString() === today.toDateString()) groups[0].items.push(item);
+    else if (itemDate.toDateString() === yesterday.toDateString())
       groups[1].items.push(item);
-    else if (d >= weekAgo) groups[2].items.push(item);
+    else if (itemDate >= weekAgo) groups[2].items.push(item);
     else groups[3].items.push(item);
   }
   return groups.filter((g) => g.items.length > 0);

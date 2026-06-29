@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
+const DEFAULT_MIN_SCORE = 70;
+
 function isRemoteJob(job: Record<string, unknown>): boolean {
   const loc = ((job.location as string) ?? "").toLowerCase();
   const desc = ((job.description as string) ?? "").toLowerCase();
@@ -74,6 +76,7 @@ async function sendTelegram(webhookUrl: string, job: Record<string, unknown>) {
   return res.ok;
 }
 
+/** Evaluate all active alerts and send Discord/Telegram notifications for matching jobs. */
 export async function POST() {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -103,23 +106,23 @@ export async function POST() {
       .from("jobs")
       .select("*")
       .or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%`)
-      .gte("match_score", alert.min_score ?? 70)
+      .gte("match_score", alert.min_score ?? DEFAULT_MIN_SCORE)
       .order("created_at", { ascending: false })
       .limit(5);
 
     if (!jobs?.length) continue;
 
     for (const job of jobs) {
-      const j = job as Record<string, unknown>;
+      const jobRecord = job as Record<string, unknown>;
       const filters = (alert.filters as Record<string, unknown>) || {};
-      if (filters.remote && !isRemoteJob(j)) continue;
+      if (filters.remote && !isRemoteJob(jobRecord)) continue;
 
       try {
         let ok = false;
         if (alert.platform === "discord") {
-          ok = await sendDiscord(alert.webhook_url, j);
+          ok = await sendDiscord(alert.webhook_url, jobRecord);
         } else if (alert.platform === "telegram") {
-          ok = await sendTelegram(alert.webhook_url, j);
+          ok = await sendTelegram(alert.webhook_url, jobRecord);
         }
         if (ok) totalSent++;
       } catch {
@@ -127,12 +130,12 @@ export async function POST() {
       }
 
       // Auto-add high-score jobs to the user's collection
-      if (alert.user_id && (j.match_score as number) >= 80) {
+      if (alert.user_id && (jobRecord.match_score as number) >= 80) {
         try {
           await supabase
             .from("collections")
             .upsert(
-              { user_id: alert.user_id, job_id: j.id, status: "bookmarked", updated_at: new Date().toISOString() },
+              { user_id: alert.user_id, job_id: jobRecord.id as string, status: "bookmarked", updated_at: new Date().toISOString() },
               { onConflict: "user_id,job_id" },
             );
         } catch {

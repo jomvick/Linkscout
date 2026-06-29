@@ -23,6 +23,7 @@ export interface ScrapeResult {
   error?: string;
 }
 
+/** Trigger a LinkedIn scrape for the given keyword via the Rust worker. */
 export async function apiScrape(
   keyword: string,
   limit = 20,
@@ -45,6 +46,7 @@ export interface IntentResult {
   error?: string;
 }
 
+/** Convert natural-language intent into LinkedIn-ready search keywords via Groq. */
 export async function apiIntent(text: string): Promise<IntentResult> {
   const res = await fetch("/api/intent", {
     method: "POST",
@@ -62,6 +64,7 @@ export interface ResumeKeywordsResult {
   hasResume: boolean;
 }
 
+/** Fetch top 3 scraping keywords derived from the user's stored CV. */
 export async function apiResumeKeywords(): Promise<ResumeKeywordsResult> {
   const res = await fetch("/api/resume", { method: "GET" });
   const data = await res.json();
@@ -105,6 +108,7 @@ export async function apiResumeKeywords(): Promise<ResumeKeywordsResult> {
 // Simple heuristic: >3 words OR starts with interrogative/verb → treat as NL phrase.
 const NL_TRIGGERS = /^(je|j'|i |i'm|looking|find|cherche|trouver|besoin|want|need|show)/i;
 
+/** Heuristic: >3 words or starts with an interrogative/verb → treat as natural language. */
 export function isNaturalLanguage(text: string): boolean {
   const words = text.trim().split(/\s+/);
   return words.length > 3 || NL_TRIGGERS.test(text.trim());
@@ -125,6 +129,7 @@ type AnalyzeJobInput = {
   description?: unknown;
 };
 
+/** Analyze a job posting via the Rust worker (summary, tech stack, match score, pitch). */
 export async function apiAnalyze(params: {
   jobId?: string;
   job?: AnalyzeJobInput;

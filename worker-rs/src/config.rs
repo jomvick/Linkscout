@@ -11,6 +11,7 @@ pub struct Config {
     pub supabase_anon_key: String,
     pub supabase_service_key: String,
     pub discord_webhook_url: Option<String>,
+    pub cors_origin: Vec<String>,
 }
 
 impl Config {
@@ -35,6 +36,12 @@ impl Config {
             supabase_service_key: env::var("SUPABASE_SERVICE_KEY")
                 .expect("SUPABASE_SERVICE_KEY is required"),
             discord_webhook_url: env::var("DISCORD_WEBHOOK_URL").ok(),
+            cors_origin: env::var("CORS_ORIGIN")
+                .unwrap_or_else(|_| "http://localhost:3000".to_string())
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
         }
     }
 }

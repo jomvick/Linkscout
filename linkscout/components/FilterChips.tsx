@@ -24,7 +24,7 @@ export default function FilterChips({ chips, active, onChange }: FilterChipsProp
             onClick={() => onChange(chip.id)}
             layout
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className={`relative rounded-lg border px-3 py-1 text-xs font-medium transition-all duration-150 ${
+            className={`relative rounded-lg border px-4 py-2 text-xs font-medium transition-all duration-150 min-h-[40px] flex items-center ${
               isActive
                 ? "border-brand/50 bg-brand/10 text-brand shadow-sm"
                 : "border-border/60 text-text-secondary/60 hover:border-border hover:text-text-secondary"

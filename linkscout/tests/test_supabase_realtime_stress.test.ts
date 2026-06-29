@@ -27,6 +27,8 @@ function makeJob(overrides: Partial<JobDraft> & { id: string }): JobDraft {
     salary: null,
     location: null,
     contract_type: null,
+    remote_policy: null,
+    seniority: null,
     pitch: null,
     score_breakdown: null,
     verdict_ai: null,
