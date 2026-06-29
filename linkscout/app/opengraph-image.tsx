@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
+export const alt = "LinkScout — AI-Powered Tech Job Search";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -16,7 +17,6 @@ export default function OGImage() {
           alignItems: "center",
           justifyContent: "center",
           background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)",
-          fontFamily: "Inter, sans-serif",
           color: "white",
           position: "relative",
           overflow: "hidden",
@@ -103,10 +103,10 @@ export default function OGImage() {
             maxWidth: "600px",
           }}
         >
-          Smart matching • Real-time alerts • CV analysis
+          Smart matching &bull; Real-time alerts &bull; CV analysis
         </div>
       </div>
     ),
-    { ...size },
+    { width: 1200, height: 630 },
   );
 }

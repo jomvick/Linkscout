@@ -39,10 +39,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       siteName: "LinkScout",
       images: [
         {
-          url: "/og-image",
+          url: "/opengraph-image",
           width: 1200,
           height: 630,
-          alt: "LinkScout Dashboard Preview",
+          alt: "LinkScout — AI-Powered Tech Job Search",
         },
       ],
       locale: locale === "fr" ? "fr_FR" : "en_US",
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       card: "summary_large_image",
       title: "LinkScout — AI-Powered Tech Job Search",
       description: t("dashboardDesc"),
-      images: ["/og-image"],
+      images: ["/opengraph-image"],
     },
   };
 }
