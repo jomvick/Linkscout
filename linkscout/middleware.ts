@@ -11,7 +11,7 @@ const intlMiddleware = createMiddleware({
   localePrefix: "as-needed",
 });
 
-const SKIP_LOCALE = ["/api/", "/auth/", "/_next/", "/favicon", "/robots.txt", "/sitemap.xml"];
+const SKIP_LOCALE = ["/api/", "/auth/", "/_next/", "/favicon", "/icon.svg", "/apple-icon.svg", "/robots.txt", "/sitemap.xml"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
