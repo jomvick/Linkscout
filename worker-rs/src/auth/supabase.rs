@@ -92,3 +92,30 @@ pub async fn auth_middleware(
     req.extensions_mut().insert(user);
     Ok(next.run(req).await)
 }
+
+/// Middleware optionnel : si un token est présent il le valide, sinon il laisse passer
+/// et injecte Option<AuthenticatedUser> dans les extensions.
+pub async fn optional_auth_middleware(
+    State(auth): State<AuthClient>,
+    mut req: Request<Body>,
+    next: Next,
+) -> Result<Response, AuthError> {
+    let token = req
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "));
+
+    if let Some(t) = token {
+        if let Ok(mut user) = auth.validate_token(t).await {
+            user.token = t.to_string();
+            req.extensions_mut().insert(Some(user));
+        } else {
+            req.extensions_mut().insert(None::<AuthenticatedUser>);
+        }
+    } else {
+        req.extensions_mut().insert(None::<AuthenticatedUser>);
+    }
+
+    Ok(next.run(req).await)
+}

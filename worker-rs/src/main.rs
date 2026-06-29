@@ -9,7 +9,8 @@ mod models;
 mod notify;
 mod quota;
 mod routes;
-mod scraper;
+pub mod scraper;
+pub mod algo;
 
 use std::sync::Arc;
 
@@ -18,8 +19,9 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
+use axum::http::{header, Method};
 
 use crate::app_state::AppState;
 use crate::auth::supabase::AuthClient;
@@ -70,8 +72,7 @@ async fn main() {
         quota,
     });
 
-    let app = Router::new()
-        .route("/scrape", post(scrape::handle))
+    let api_strict = Router::new()
         .route("/analyze", post(analyze::handle))
         .route("/message", post(message::handle))
         .route("/enrich", post(enrich_route::handle))
@@ -81,9 +82,25 @@ async fn main() {
         .route_layer(middleware::from_fn_with_state(
             auth.clone(),
             auth::supabase::auth_middleware,
-        ))
+        ));
+
+    let api_optional = Router::new()
+        .route("/scrape", post(scrape::handle))
+        .route_layer(middleware::from_fn_with_state(
+            auth.clone(),
+            auth::supabase::optional_auth_middleware,
+        ));
+
+    let app = Router::new()
+        .merge(api_strict)
+        .merge(api_optional)
         .route("/health", get(health::handle))
-        .layer(CorsLayer::permissive())
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT])
+        )
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
 

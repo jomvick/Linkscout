@@ -16,7 +16,7 @@ target/
 *.coverage.*
 
 # Supabase local temp
-supabase/.temp/
+**/supabase/.temp/
 
 # Python
 *.egg-info/

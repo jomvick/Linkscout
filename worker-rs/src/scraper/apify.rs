@@ -4,22 +4,29 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::Value;
 
-const APIFY_ACTOR_ID: &str = "logical_scrapers/linkedin-jobs-scraper";
 const APIFY_API: &str = "https://api.apify.com/v2";
 
+#[derive(Clone)]
 pub struct ApifyScraper {
     http: Client,
     token: String,
+    actor_id: String,
+    source_name: String,
 }
 
 impl ApifyScraper {
-    pub fn new(http: Client, token: String) -> Self {
-        Self { http, token }
+    pub fn new(http: Client, token: String, actor_id: String, source_name: String) -> Self {
+        Self { http, token, actor_id, source_name }
     }
 
     async fn run_actor(&self, keyword: &str, limit: u32) -> Result<Vec<Value>, String> {
+        // WTTJ scraper uses searchQuery, Indeed uses position, LinkedIn uses keywords
+        // Let's pass all possible keys, actors usually ignore unknown keys.
         let input = serde_json::json!({
             "keywords": keyword,
+            "searchQuery": keyword,
+            "position": keyword,
+            "country": "FR",
             "location": "",
             "maxItems": limit,
             "proxyConfiguration": {
@@ -27,9 +34,10 @@ impl ApifyScraper {
             }
         });
 
+        let safe_actor_id = self.actor_id.replace("/", "~");
         let url = format!(
             "{}/acts/{}/run-sync-get-dataset-items?token={}&timeout=120",
-            APIFY_API, APIFY_ACTOR_ID, self.token
+            APIFY_API, safe_actor_id, self.token
         );
 
         let resp = self
@@ -51,11 +59,12 @@ impl ApifyScraper {
             .map_err(|e| format!("Failed to parse Apify response: {}", e))
     }
 
-    fn map_item(item: &Value, keyword: &str) -> RawJob {
+    fn map_item(&self, item: &Value, keyword: &str) -> RawJob {
         let obj = item.as_object().cloned().unwrap_or_default();
 
         let title = obj
             .get("title")
+            .or_else(|| obj.get("positionName"))
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
@@ -94,8 +103,9 @@ impl ApifyScraper {
             location,
             description,
             url,
-            source: "apify".into(),
+            source: self.source_name.clone(),
             keyword: keyword.to_string(),
+            posted_at: None,
         }
     }
 }
@@ -103,14 +113,16 @@ impl ApifyScraper {
 #[async_trait]
 impl JobSource for ApifyScraper {
     fn name(&self) -> &'static str {
+        // Since we need to return &'static str but we have a String, we leak it or just return a generic name.
+        // Actually, name() isn't heavily used right now. Let's just return "apify".
         "apify"
     }
 
     async fn search(&self, keyword: &str, limit: u32) -> Vec<RawJob> {
         match self.run_actor(keyword, limit).await {
-            Ok(items) => items.iter().map(|v| Self::map_item(v, keyword)).collect(),
+            Ok(items) => items.iter().map(|v| self.map_item(v, keyword)).collect(),
             Err(e) => {
-                tracing::warn!("Apify scrape failed: {}", e);
+                tracing::warn!("Apify scrape failed for {}: {}", self.source_name, e);
                 vec![]
             }
         }

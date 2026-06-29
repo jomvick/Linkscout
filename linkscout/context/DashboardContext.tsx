@@ -356,7 +356,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       setActiveView("dashboard");
       setCurrentKeyword(trimmed);
       try {
-        const data = await apiScrape(trimmed, 10);
+        const data = await apiScrape(trimmed);
         if (data.success && data.jobs?.length > 0) {
           const mapped = data.jobs.map(
             (j: Record<string, unknown>) => mapJob(j)
@@ -510,6 +510,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
               : null,
             salary: (row.salary as string) || null,
             contract_type: (row.contract_type as string) || null,
+            remote_policy: (row.remote_policy as string) || null,
+            seniority: (row.seniority as string) || null,
             pitch: (row.pitch as string) || null,
           };
           addJobs([job]);
@@ -550,6 +552,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
               : null,
             salary: (row.salary as string) || null,
             contract_type: (row.contract_type as string) || null,
+            remote_policy: (row.remote_policy as string) || null,
+            seniority: (row.seniority as string) || null,
             pitch: (row.pitch as string) || null,
           };
           addJobs([job]);

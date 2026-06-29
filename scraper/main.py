@@ -76,24 +76,57 @@ async def _process_one(entry: dict[str, Any], keyword: str) -> Optional[dict[str
         }
         return await enrich_job(job)
 
+async def _fetch_source_and_process(source_func, keyword: str, limit: int, q: asyncio.Queue):
+    try:
+        listings = await source_func(keyword, limit=limit)
+        if source_func.__name__ == "search_jobs":
+            tasks = [_process_one(entry, keyword) for entry in listings]
+            for coro in asyncio.as_completed(tasks):
+                try:
+                    job = await coro
+                    if job:
+                        await q.put(job)
+                except Exception:
+                    logger.exception("Failed to process one scraped listing")
+        else:
+            tasks = [enrich_job(entry) for entry in listings]
+            for coro in asyncio.as_completed(tasks):
+                try:
+                    job = await coro
+                    if job:
+                        await q.put(job)
+                except Exception:
+                    logger.exception("Failed to enrich one listing")
+    except Exception:
+        logger.exception(f"Source fetch failed for {source_func.__name__}")
 
 async def _job_generator(keyword: str, limit: int):
-    listings = await search_jobs(keyword, limit=limit)
-    yield json.dumps({"type": "meta", "total": len(listings)}) + "\n"
+    from dorker import search_jobs
+    from wttj_scraper import search_wttj
+    from indeed_scraper import search_indeed
 
-    if not listings:
-        yield json.dumps({"type": "done"}) + "\n"
-        return
+    q = asyncio.Queue()
+    
+    # Send a meta event to initialize the frontend state
+    yield json.dumps({"type": "meta", "total": limit * 3}) + "\n"
 
-    tasks = [_process_one(entry, keyword) for entry in listings]
-    for coro in asyncio.as_completed(tasks):
-        try:
-            job = await coro
-            if job:
-                yield json.dumps({"type": "job", "data": job}) + "\n"
-        except Exception:
-            logger.exception("Failed to process one scraped listing")
-            continue
+    tasks = [
+        asyncio.create_task(_fetch_source_and_process(search_jobs, keyword, limit, q)),
+        asyncio.create_task(_fetch_source_and_process(search_indeed, keyword, limit, q)),
+        asyncio.create_task(_fetch_source_and_process(search_wttj, keyword, limit, q)),
+    ]
+
+    async def _wait_all():
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await q.put(None)
+        
+    asyncio.create_task(_wait_all())
+
+    while True:
+        job = await q.get()
+        if job is None:
+            break
+        yield json.dumps({"type": "job", "data": job}) + "\n"
 
     yield json.dumps({"type": "done"}) + "\n"
 

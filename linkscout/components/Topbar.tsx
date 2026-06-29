@@ -169,7 +169,7 @@ export default function Topbar({
     : null;
 
   return (
-    <header className="shrink-0 border-b border-border bg-surface/90 backdrop-blur-xl supports-backdrop-blur:bg-surface/80">
+    <header className="relative z-[100] shrink-0 border-b border-border bg-surface/90 backdrop-blur-xl supports-backdrop-blur:bg-surface/80">
       <div className="flex h-14 items-center gap-3 px-5">
         {/* Search bar */}
         <form onSubmit={onSubmit} className="flex-1 max-w-xl min-w-0">
@@ -292,7 +292,7 @@ export default function Topbar({
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 origin-top-right rounded-2xl border border-border bg-surface shadow-2xl shadow-black/10 dark:shadow-black/40 ring-1 ring-black/5 dark:ring-white/5 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+              <div className="fixed right-5 top-14 mt-1 w-72 origin-top-right rounded-2xl border border-border bg-surface shadow-2xl shadow-black/10 dark:shadow-black/40 ring-1 ring-black/5 dark:ring-white/5 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                 {user ? (
                   <>
                     {/* ── User Info ── */}

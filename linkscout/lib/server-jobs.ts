@@ -67,6 +67,8 @@ export async function persistJobUpdate(
         salary: fields.salary,
         location: fields.location,
         contract_type: fields.contract_type,
+        remote_policy: fields.remote_policy,
+        seniority: fields.seniority,
         match_score: fields.match_score,
         score_breakdown: fields.score_breakdown,
         verdict_ai: fields.verdict_ai,

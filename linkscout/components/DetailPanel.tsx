@@ -261,7 +261,7 @@ export default function DetailPanel({
                     />
                   )}
                   {job.source && (
-                    <DetailRow label="Source" value={job.source} />
+                    <DetailRow label="Source" value={job.source.includes('linkedin') ? 'LinkedIn' : job.source} />
                   )}
                 </div>
 

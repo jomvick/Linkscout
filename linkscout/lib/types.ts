@@ -20,6 +20,8 @@ export interface Job {
   salary: string | null;
   location: string | null;
   contract_type: string | null;
+  remote_policy: string | null;
+  seniority: string | null;
   pitch: string | null;
   score_breakdown: ScoreBreakdown | null;
   verdict_ai: string | null;

@@ -4,6 +4,8 @@ use std::env;
 pub struct Config {
     pub port: u16,
     pub apify_token: String,
+    pub apify_actor_indeed: String,
+    pub apify_actor_wttj: String,
     pub groq_api_key: String,
     pub supabase_url: String,
     pub supabase_anon_key: String,
@@ -20,6 +22,10 @@ impl Config {
                 .unwrap_or(8001),
             apify_token: env::var("APIFY_TOKEN")
                 .unwrap_or_default(),
+            apify_actor_indeed: env::var("APIFY_ACTOR_INDEED")
+                .unwrap_or_else(|_| "misceres/indeed-scraper".to_string()),
+            apify_actor_wttj: env::var("APIFY_ACTOR_WTTJ")
+                .unwrap_or_else(|_| "crawlergang/welcome-to-the-jungle-scraper".to_string()),
             groq_api_key: env::var("GROQ_API_KEY")
                 .expect("GROQ_API_KEY is required"),
             supabase_url: env::var("SUPABASE_URL")

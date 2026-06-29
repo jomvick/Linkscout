@@ -12,6 +12,8 @@ pub struct RawJob {
     pub url: String,
     pub source: String,
     pub keyword: String,
+    #[serde(default)]
+    pub posted_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// Analyse IA d'une offre.

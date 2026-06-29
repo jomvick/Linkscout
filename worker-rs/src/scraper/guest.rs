@@ -191,6 +191,7 @@ impl JobSource for GuestScraper {
                 url: url.clone(),
                 source: "linkedin_guest".into(),
                 keyword: keyword.to_string(),
+                posted_at: None,
             });
         }
 

@@ -96,9 +96,20 @@ export default function OpportunityCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-1.5">
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-sm font-semibold text-text-primary group-hover:text-brand transition-colors">
-                {job.title}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="truncate text-sm font-semibold text-text-primary group-hover:text-brand transition-colors">
+                  {job.title}
+                </h3>
+                {job.source && (
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase ${
+                    job.source === 'wttj' ? 'bg-yellow-500/20 text-yellow-600' :
+                    job.source === 'indeed' ? 'bg-blue-500/20 text-blue-600' :
+                    'bg-slate-500/20 text-slate-600'
+                  }`}>
+                    {job.source.replace('_guest', '')}
+                  </span>
+                )}
+              </div>
               <p className="mt-0.5 text-xs text-text-secondary truncate">
                 {job.company}
               </p>

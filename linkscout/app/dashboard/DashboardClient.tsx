@@ -184,14 +184,10 @@ export default function DashboardClient() {
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      if (!isAuthed) {
-        router.push("/login");
-        return;
-      }
       onFirstSearch();
       searchJobs(searchValue);
     },
-    [searchJobs, searchValue, isAuthed, router, onFirstSearch],
+    [searchJobs, searchValue, onFirstSearch],
   );
 
   const handleAnalyze = useCallback(
@@ -356,7 +352,7 @@ export default function DashboardClient() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen flex bg-canvas relative overflow-clip">
+      <div className="h-screen flex bg-canvas">
         <nav className="flex h-full w-55 shrink-0 flex-col border-r border-border bg-surface select-none">
           <div className="flex items-center h-14 px-4 border-b border-border">
             <div className="flex items-center gap-2.5">

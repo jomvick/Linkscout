@@ -54,6 +54,8 @@ export function mapJob(row: JobDraftRecord): Job {
     salary: strOrNull(row.salary) ?? strOrNull(row.estimated_salary),
     location: strOrNull(row.location),
     contract_type: strOrNull(row.contract_type),
+    remote_policy: strOrNull(row.remote_policy),
+    seniority: strOrNull(row.seniority),
     pitch: strOrNull(row.pitch),
     score_breakdown: breakdown
       ? {

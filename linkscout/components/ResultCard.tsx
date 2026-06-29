@@ -68,9 +68,21 @@ export default function ResultCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-sm font-semibold text-text-primary leading-snug">
-                {job.title}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="truncate text-sm font-semibold text-text-primary leading-snug">
+                  {job.title}
+                </h3>
+                {job.source && (
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase shrink-0 ${
+                    job.source === 'wttj' ? 'bg-yellow-500/20 text-yellow-600' :
+                    job.source === 'indeed' ? 'bg-blue-500/20 text-blue-600' :
+                    job.source.includes('linkedin') ? 'bg-blue-600/10 text-blue-600 border border-blue-600/20' :
+                    'bg-slate-500/20 text-slate-600'
+                  }`}>
+                    {job.source.replace('_guest', '')}
+                  </span>
+                )}
+              </div>
               <p className="mt-0.5 text-xs text-text-secondary/70 truncate">
                 {job.company}
               </p>
@@ -162,6 +174,40 @@ export default function ResultCard({
             <span className="text-[10px] font-mono text-text-secondary/40">
               +{techStack.length - 5}
             </span>
+          )}
+        </div>
+      )}
+
+      {/* Affichage auto de l'IA */}
+      {(job.score_breakdown || job.verdict_ai) && (
+        <div className="mt-3 border-t border-border/40 pt-3 space-y-2">
+          {job.score_breakdown && (
+            <div className="flex items-center gap-3 text-[10px] font-medium text-text-secondary/80 flex-wrap">
+              {job.score_breakdown.keyword_alignment != null && (
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                  Mots-clés: {job.score_breakdown.keyword_alignment}%
+                </span>
+              )}
+              {job.score_breakdown.skills_match != null && (
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                  Compétences: {job.score_breakdown.skills_match}%
+                </span>
+              )}
+              {job.score_breakdown.seniority_match != null && (
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  Exp: {job.score_breakdown.seniority_match}%
+                </span>
+              )}
+            </div>
+          )}
+          {job.verdict_ai && (
+            <p className="text-[11px] text-text-secondary/90 line-clamp-2 leading-relaxed bg-surface/50 rounded-lg p-2 border border-border/40">
+              <span className="font-semibold text-brand mr-1">IA:</span>
+              {job.verdict_ai}
+            </p>
           )}
         </div>
       )}
