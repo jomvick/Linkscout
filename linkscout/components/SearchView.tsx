@@ -67,16 +67,14 @@ export default function SearchView({
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <aside className="w-90 shrink-0 space-y-2 overflow-y-auto border-r border-border/60 p-3 max-lg:min-w-0 max-lg:w-full">
-        {selected && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-[10px] font-medium text-text-secondary/40 px-1 pb-1 uppercase tracking-wider"
-          >
-            {jobs.length} résultat{jobs.length !== 1 ? "s" : ""}
-          </motion.div>
-        )}
+      <aside
+        className={`w-full lg:w-90 shrink-0 space-y-2 overflow-y-auto border-r border-border/60 p-3 transition-all ${
+          selected ? "hidden lg:block" : "block"
+        }`}
+      >
+        <div className="text-[10px] font-medium text-text-secondary/40 px-1 pb-1 uppercase tracking-wider">
+          {jobs.length} résultat{jobs.length !== 1 ? "s" : ""}
+        </div>
         <AnimatePresence mode="popLayout">
           {jobs.map((job, index) => (
             <ResultCard
@@ -92,7 +90,11 @@ export default function SearchView({
         </AnimatePresence>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-surface min-w-0 relative">
+      <main
+        className={`flex-1 overflow-y-auto bg-surface min-w-0 relative ${
+          selected ? "block" : "hidden lg:block"
+        }`}
+      >
         <AnimatePresence mode="wait">
           {selected ? (
             <motion.div

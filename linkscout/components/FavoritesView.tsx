@@ -12,6 +12,7 @@ export default function FavoritesView() {
   const [items, setItems] = useState<CollectionWithJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const fetchFavorites = useCallback(async () => {
     try {
@@ -36,10 +37,18 @@ export default function FavoritesView() {
     async (jobId: string) => {
       await toggleFavorite(jobId);
       fetchFavorites();
-      if (selectedId === jobId) setSelectedId(null);
+      if (selectedId === jobId) {
+        setSelectedId(null);
+        setMobileDetailOpen(false);
+      }
     },
     [toggleFavorite, fetchFavorites, selectedId],
   );
+
+  const handleSelect = useCallback((jobId: string) => {
+    setSelectedId(jobId);
+    setMobileDetailOpen(true);
+  }, []);
 
   const selected = useMemo(
     () => items.find((i) => i.job_id === selectedId) || items[0] || null,
@@ -90,7 +99,7 @@ export default function FavoritesView() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+        <div className={`flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3 ${mobileDetailOpen ? "hidden lg:block" : "block"}`}>
           <AnimatePresence mode="popLayout">
             {items.map((item) => {
               const job = item.job;
@@ -104,7 +113,7 @@ export default function FavoritesView() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ duration: 0.18 }}
-                  onClick={() => setSelectedId(item.job_id)}
+                  onClick={() => handleSelect(item.job_id)}
                   className={`group cursor-pointer rounded-2xl border bg-surface p-5 transition-all duration-150 ${
                     isSelected
                       ? "border-brand/30 shadow-sm shadow-brand/5"
@@ -156,7 +165,20 @@ export default function FavoritesView() {
         </div>
 
         {selected && (
-          <div className="w-80 shrink-0 border-l border-border overflow-y-auto p-5 space-y-5 hidden lg:block">
+          <div className={`w-full lg:w-80 shrink-0 border-l border-border overflow-y-auto p-4 sm:p-5 space-y-5 bg-surface ${mobileDetailOpen ? "block" : "hidden lg:block"}`}>
+            <div className="flex items-center gap-2 lg:hidden mb-2">
+              <button
+                type="button"
+                onClick={() => setMobileDetailOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-text-secondary/60 hover:text-text-primary hover:border-border transition-colors"
+                aria-label="Retour à la liste"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </svg>
+              </button>
+              <span className="text-sm font-medium text-text-secondary">Retour aux favoris</span>
+            </div>
             <div className="space-y-1">
               <h3 className="text-xs font-bold font-mono text-text-secondary/50 uppercase tracking-wider">
                 Analyse de l'opportunité

@@ -254,7 +254,7 @@ export default function HistoryView({ onOpenSearch }: HistoryViewProps) {
         {/* ── split-pane ── */}
         <div className="flex flex-1 overflow-hidden">
           {/* colonne gauche : liste de jobs */}
-          <div className="flex w-[300px] shrink-0 flex-col overflow-hidden border-r border-border">
+          <div className={`flex w-full lg:w-[300px] shrink-0 flex-col overflow-hidden border-r border-border ${selectedJob ? "hidden lg:flex" : "flex"}`}>
             {loadingJobs ? (
               <Spinner />
             ) : historyJobs.length === 0 ? (
@@ -308,7 +308,7 @@ export default function HistoryView({ onOpenSearch }: HistoryViewProps) {
           </div>
 
           {/* colonne droite : panneau détail */}
-          <div className="flex flex-1 flex-col overflow-hidden">
+          <div className={`flex flex-1 flex-col overflow-hidden ${selectedJob ? "flex" : "hidden lg:flex"}`}>
             {selectedJob ? (
               <DetailPanel
                 job={selectedJob}
@@ -316,6 +316,7 @@ export default function HistoryView({ onOpenSearch }: HistoryViewProps) {
                 onAnalyze={() => handleAnalyze(selectedJob)}
                 isFavorite={favorites.has(selectedJob.id)}
                 onToggleFavorite={() => toggleFavorite(selectedJob.id)}
+                onClose={() => setSelectedJob(null)}
                 keyword={selectedHistory.keyword}
               />
             ) : !loadingJobs && historyJobs.length > 0 ? (
@@ -436,11 +437,11 @@ export default function HistoryView({ onOpenSearch }: HistoryViewProps) {
                     </div>
 
                     {/* actions */}
-                    <div className="flex items-center gap-1.5 opacity-0 transition-all duration-150 group-hover:opacity-100">
+                    <div className="flex items-center gap-1.5 opacity-0 transition-all duration-150 group-hover:opacity-100 max-lg:opacity-100">
                       <button
                         type="button"
                         onClick={() => handleView(item)}
-                        className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[11px] font-semibold text-text-secondary hover:border-brand/40 hover:bg-brand/5 hover:text-brand transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg border border-border px-2 sm:px-3 py-1.5 text-[11px] font-semibold text-text-secondary hover:border-brand/40 hover:bg-brand/5 hover:text-brand transition-colors"
                       >
                         <svg
                           className="h-3 w-3"
@@ -460,7 +461,7 @@ export default function HistoryView({ onOpenSearch }: HistoryViewProps) {
                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                           />
                         </svg>
-                        Voir les offres
+                        <span className="hidden sm:inline">Voir les offres</span>
                       </button>
                       <button
                         type="button"

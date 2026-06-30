@@ -15,6 +15,7 @@ interface TopbarProps {
   onNavigate?: (
     view: "dashboard" | "favorites" | "alerts" | "history" | "settings",
   ) => void;
+  onMenuToggle?: () => void;
 }
 
 const NAV_LINKS = [
@@ -109,6 +110,7 @@ export default function Topbar({
   resultCount,
   onCmdK,
   onNavigate,
+  onMenuToggle,
 }: TopbarProps) {
   const { isDark, toggle } = useTheme();
   const [user, setUser] = useState<import("@supabase/supabase-js").User | null>(
@@ -170,7 +172,29 @@ export default function Topbar({
 
   return (
     <header className="sticky top-0 z-10 shrink-0 border-b border-border bg-surface/90 backdrop-blur-xl supports-backdrop-blur:bg-surface/80">
-      <div className="flex h-14 items-center gap-3 px-5">
+      <div className="flex h-14 items-center gap-2 sm:gap-3 px-3 sm:px-5">
+        {/* Mobile menu toggle */}
+        <button
+          type="button"
+          onClick={onMenuToggle}
+          aria-label="Ouvrir le menu"
+          className="lg:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60 text-text-secondary/60 hover:text-text-primary hover:border-border transition-colors"
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+            />
+          </svg>
+        </button>
+
         {/* Search bar */}
         <form onSubmit={onSubmit} className="flex-1 max-w-xl min-w-0">
           <div className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-canvas/80 px-3.5 py-1.75 transition-all duration-200 focus-within:border-brand/40 focus-within:shadow-sm focus-within:shadow-brand/5">

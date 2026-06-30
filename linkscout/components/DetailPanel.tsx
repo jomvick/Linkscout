@@ -47,8 +47,8 @@ export default function DetailPanel({
 
   return (
     <div className="h-full flex flex-col bg-surface">
-      <div className="shrink-0 p-5 pb-3 border-b border-border/40">
-        <div className="flex items-start gap-3.5 mb-4">
+      <div className="shrink-0 p-3 sm:p-5 pb-3 border-b border-border/40">
+        <div className="flex items-start gap-3 mb-3 sm:mb-4">
           <LogoDisplay
             domain={job.company?.toLowerCase().replace(/[^a-z0-9]/g, "") || ""}
             name={job.company}
@@ -88,7 +88,7 @@ export default function DetailPanel({
         </div>
 
         <div
-          className="flex gap-1 rounded-lg bg-canvas p-0.5"
+          className="flex gap-1 rounded-lg bg-canvas p-0.5 overflow-x-auto scrollbar-hide"
           role="tablist"
           aria-label="Sections du détail de l'offre"
         >
@@ -101,7 +101,7 @@ export default function DetailPanel({
               aria-controls={`job-panel-${t.key}`}
               aria-selected={tab === t.key}
               onClick={() => setTab(t.key)}
-              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+              className={`flex-1 min-w-0 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150 whitespace-nowrap ${
                 tab === t.key
                   ? "bg-surface text-text-primary shadow-sm border border-border/50"
                   : "text-text-secondary/60 hover:text-text-secondary"
@@ -121,7 +121,7 @@ export default function DetailPanel({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
-            className="p-5 space-y-6"
+            className="p-3 sm:p-5 space-y-6"
             role="tabpanel"
             id={`job-panel-${tab}`}
             aria-labelledby={`job-tab-${tab}`}

@@ -178,6 +178,7 @@ export default function DashboardClient() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { showWizard, completeOnboarding, hasDoneFirstSearch, onFirstSearch } =
     useFirstUse();
 
@@ -247,6 +248,14 @@ export default function DashboardClient() {
       else if (actionId === "settings" || actionId === "cv")
         setView("settings");
       else setView("dashboard");
+    },
+    [setView],
+  );
+
+  const handleNav = useCallback(
+    (id: View) => {
+      setView(id);
+      setMobileMenuOpen(false);
     },
     [setView],
   );
@@ -352,8 +361,8 @@ export default function DashboardClient() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen flex bg-canvas">
-        <nav className="flex h-full w-55 shrink-0 flex-col border-r border-border bg-surface select-none">
+      <div className="h-dvh flex bg-canvas">
+        <nav className="hidden lg:flex h-full w-55 shrink-0 flex-col border-r border-border bg-surface select-none">
           <div className="flex items-center h-14 px-4 border-b border-border">
             <div className="flex items-center gap-2.5">
               <div className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-brand shadow-sm shadow-brand/20">
@@ -451,6 +460,123 @@ export default function DashboardClient() {
           </div>
         </nav>
 
+        {/* Mobile sidebar overlay */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+                onClick={() => setMobileMenuOpen(false)}
+              />
+              <motion.nav
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="fixed left-0 top-0 z-50 h-dvh w-64 border-r border-border bg-surface shadow-2xl lg:hidden flex flex-col"
+              >
+                <div className="flex items-center h-14 px-4 border-b border-border">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-brand shadow-sm shadow-brand/20">
+                      <svg
+                        className="h-4 w-4 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.58 5.58 0 006.25 10.5a5.58 5.58 0 012.038-3.712"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-semibold tracking-tight text-text-primary">
+                      Link<span className="text-brand">Scout</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-0.5 px-2 py-4">
+                  {NAV_ITEMS.map((item) => {
+                    const isActive = view === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleNav(item.id)}
+                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 relative ${
+                          isActive
+                            ? "text-brand"
+                            : "text-text-secondary/60 hover:bg-canvas/60 hover:text-text-primary"
+                        }`}
+                        aria-pressed={isActive}
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="mobileNavIndicator"
+                            className="absolute inset-0 bg-brand/10 rounded-lg -z-10"
+                            transition={{
+                              type: "spring",
+                              stiffness: 380,
+                              damping: 30,
+                            }}
+                          />
+                        )}
+                        <span className="shrink-0">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-border px-2 py-3">
+                  <button
+                    type="button"
+                    onClick={() => handleNav("settings")}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 relative ${
+                      view === "settings"
+                        ? "text-brand"
+                        : "text-text-secondary/60 hover:bg-canvas/60 hover:text-text-primary"
+                    }`}
+                    aria-pressed={view === "settings"}
+                  >
+                    {view === "settings" && (
+                      <motion.div
+                        layoutId="mobileNavIndicator"
+                        className="absolute inset-0 bg-brand/10 rounded-lg -z-10"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <svg
+                      className="w-4 h-4 shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.75}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    <span>Settings</span>
+                  </button>
+                </div>
+              </motion.nav>
+            </>
+          )}
+        </AnimatePresence>
+
         <div className="flex flex-1 flex-col min-w-0">
           <Topbar
             searchValue={searchValue}
@@ -460,6 +586,7 @@ export default function DashboardClient() {
             resultCount={filteredJobs.length}
             onCmdK={() => setCmdOpen(true)}
             onNavigate={setView}
+            onMenuToggle={() => setMobileMenuOpen((v) => !v)}
           />
 
           <main className="flex-1 overflow-hidden">
