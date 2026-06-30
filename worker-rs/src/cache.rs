@@ -17,6 +17,7 @@ struct CacheEntry {
 }
 
 impl Cache {
+    #[allow(dead_code)]
     pub fn new(ttl_minutes: u64, max_entries: usize) -> Self {
         Self {
             store: Mutex::new(HashMap::new()),
@@ -57,11 +58,13 @@ impl Cache {
         );
     }
 
+    #[allow(dead_code)]
     pub fn invalidate_user(&self, user_id: &str) {
         let mut store = self.store.lock().unwrap();
         store.retain(|k, _| !k.starts_with(&format!("{}:", user_id)));
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.store.lock().unwrap().len()
     }

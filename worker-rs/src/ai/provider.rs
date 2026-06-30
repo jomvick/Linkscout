@@ -3,6 +3,7 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait LlmProvider: Send + Sync {
+    #[allow(dead_code)]
     fn name(&self) -> &'static str;
     async fn analyze(
         &self,

@@ -14,6 +14,7 @@ use crate::scraper::JobSource;
 pub struct ScrapeRequest {
     keyword: String,
     #[serde(default = "default_limit")]
+    #[allow(dead_code)]
     limit: u32,
 }
 

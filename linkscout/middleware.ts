@@ -20,7 +20,7 @@ const SKIP_LOCALE = [
   "/icon.svg",
   "/apple-icon.png",
   "/apple-icon.svg",
-  "/manifest.webmanifest",
+  "/manifest.json",
   "/robots.txt",
   "/sitemap.xml",
 ];
@@ -133,6 +133,6 @@ function addSecurityHeaders(response: NextResponse) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.png|icon.svg|apple-icon.png|apple-icon.svg|manifest.webmanifest|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|icon.svg|apple-icon.png|apple-icon.svg|manifest.json|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

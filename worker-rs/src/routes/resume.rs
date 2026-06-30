@@ -15,6 +15,7 @@ const MODEL: &str = "llama-3.3-70b-versatile";
 pub struct ProcessRequest {
     resume_id: String,
     storage_path: String,
+    #[allow(dead_code)]
     file_name: String,
 }
 

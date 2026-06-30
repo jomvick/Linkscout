@@ -106,6 +106,7 @@ impl QuotaTracker {
         }
     }
 
+    #[allow(dead_code)]
     pub fn reset_user(&self, user_id: &str) {
         self.store.lock().unwrap().remove(user_id);
     }

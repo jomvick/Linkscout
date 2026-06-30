@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
         },
       ],
     },
-    manifest: "/site.webmanifest",
+    manifest: "/manifest.json",
     robots: {
       index: true,
       follow: true,

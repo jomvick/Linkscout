@@ -3,8 +3,11 @@ use std::env;
 #[derive(Clone)]
 pub struct Config {
     pub port: u16,
+    #[allow(dead_code)]
     pub apify_token: String,
+    #[allow(dead_code)]
     pub apify_actor_indeed: String,
+    #[allow(dead_code)]
     pub apify_actor_wttj: String,
     pub groq_api_key: String,
     pub supabase_url: String,

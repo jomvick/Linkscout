@@ -18,6 +18,7 @@ static USER_AGENTS: &[&str] = &[
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
 ];
 
+#[allow(dead_code)]
 static JOB_ID_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"/jobs/view/.+-(\d+)").unwrap());
 
@@ -119,6 +120,7 @@ impl GuestScraper {
         results
     }
 
+    #[allow(dead_code)]
     fn extract_job_id(url: &str) -> Option<String> {
         JOB_ID_RE
             .captures(url)
