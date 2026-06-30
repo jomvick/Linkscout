@@ -37,7 +37,7 @@ impl Config {
                 .expect("SUPABASE_SERVICE_KEY is required"),
             discord_webhook_url: env::var("DISCORD_WEBHOOK_URL").ok(),
             cors_origin: env::var("CORS_ORIGIN")
-                .unwrap_or_else(|_| "http://localhost:3000".to_string())
+                .unwrap_or_else(|_| "http://localhost:3000,https://linkscout-rust.vercel.app".to_string())
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
