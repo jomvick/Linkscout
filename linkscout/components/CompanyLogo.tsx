@@ -29,10 +29,10 @@ function slugify(name: string): string {
 /**
  * Chaîne de sources logo (tentées dans l'ordre) :
  *
- * 1. logo_url persistée par le scraper (URL unavatar .com pré-calculée)
- * 2. unavatar .io  — startups tech (GitLab, Vercel, etc.)
- * 3. unavatar .ai  — startups IA
- * 4. unavatar .co  — SaaS divers
+ * 1. logo_url persistée par le scraper
+ * 2. Clearbit Logo API (.com) — retourne une image valide ou 404 → onError
+ * 3. Clearbit Logo API (.io)
+ * 4. Clearbit Logo API (.ai)
  * 5. Initiales     — fallback final garanti
  */
 function buildSources(companyName: string, logoUrl?: string | null): string[] {
@@ -42,8 +42,8 @@ function buildSources(companyName: string, logoUrl?: string | null): string[] {
   if (logoUrl) sources.push(logoUrl);
 
   if (slug) {
-    for (const tld of ["com", "io", "ai", "co"]) {
-      const url = `https://unavatar.io/${slug}.${tld}`;
+    for (const tld of ["com", "io", "ai"]) {
+      const url = `https://logo.clearbit.com/${slug}.${tld}`;
       if (!sources.includes(url)) sources.push(url);
     }
   }
