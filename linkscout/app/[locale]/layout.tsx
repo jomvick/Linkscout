@@ -16,6 +16,12 @@ export async function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+export async function generateViewport({ params }: { params: Promise<{ locale: string }> }) {
+  return {
+    themeColor: "#2563EB",
+  };
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Landing" });
@@ -25,9 +31,23 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: t("dashboardDesc"),
     metadataBase: new URL("https://linkscout-rust.vercel.app"),
     icons: {
-      icon: "/icon.svg",
-      apple: "/apple-icon.svg",
+      icon: [
+        { url: "/favicon.svg", type: "image/svg+xml" },
+        { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+        { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      ],
+      shortcut: "/favicon.ico",
+      apple: [
+        { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      ],
+      other: [
+        {
+          rel: "mask-icon",
+          url: "/favicon.svg",
+        },
+      ],
     },
+    manifest: "/site.webmanifest",
     robots: {
       index: true,
       follow: true,

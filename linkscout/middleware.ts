@@ -11,7 +11,19 @@ const intlMiddleware = createMiddleware({
   localePrefix: "as-needed",
 });
 
-const SKIP_LOCALE = ["/api/", "/auth/", "/_next/", "/favicon", "/icon.svg", "/apple-icon.svg", "/robots.txt", "/sitemap.xml"];
+const SKIP_LOCALE = [
+  "/api/",
+  "/auth/",
+  "/_next/",
+  "/favicon",
+  "/icon.png",
+  "/icon.svg",
+  "/apple-icon.png",
+  "/apple-icon.svg",
+  "/manifest.webmanifest",
+  "/robots.txt",
+  "/sitemap.xml",
+];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -121,6 +133,6 @@ function addSecurityHeaders(response: NextResponse) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|icon.svg|apple-icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|icon.svg|apple-icon.png|apple-icon.svg|manifest.webmanifest|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
