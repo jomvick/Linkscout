@@ -8,6 +8,7 @@ mod enrich;
 mod models;
 mod notify;
 mod quota;
+mod retry;
 mod routes;
 pub mod scraper;
 pub mod algo;
@@ -26,7 +27,7 @@ use axum::http::request::Parts as RequestParts;
 
 use crate::app_state::AppState;
 use crate::auth::supabase::AuthClient;
-use crate::cache::Cache;
+use crate::cache::{Cache, DEFAULT_CACHE_MAX_ENTRIES, DEFAULT_CACHE_TTL_MINUTES};
 use crate::config::Config;
 use crate::db::supabase::SupabaseClient;
 use crate::quota::QuotaTracker;
@@ -45,8 +46,12 @@ async fn main() {
 
     let config = Arc::new(Config::from_env());
 
+    const HTTP_CLIENT_TIMEOUT_SECS: u64 = 130;
+    const QUOTA_MAX_PER_WINDOW: u32 = 100;
+    const QUOTA_WINDOW_MINUTES: u64 = 1440;
+
     let http = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(130))
+        .timeout(std::time::Duration::from_secs(HTTP_CLIENT_TIMEOUT_SECS))
         .build()
         .expect("Failed to build HTTP client");
 
@@ -62,8 +67,8 @@ async fn main() {
         config.supabase_anon_key.clone(),
     );
 
-    let cache = Arc::new(Cache::new(60, 500));
-    let quota = Arc::new(QuotaTracker::new(100, 1440));
+    let cache = Arc::new(Cache::new(DEFAULT_CACHE_TTL_MINUTES, DEFAULT_CACHE_MAX_ENTRIES));
+    let quota = Arc::new(QuotaTracker::new(QUOTA_MAX_PER_WINDOW, QUOTA_WINDOW_MINUTES));
 
     let state = Arc::new(AppState {
         http,

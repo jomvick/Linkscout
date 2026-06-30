@@ -4,7 +4,12 @@ use std::hash::{Hash, Hasher};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-/// Cache mémoire simple avec TTL.
+/// Durée de vie par défaut des entrées (minutes).
+pub const DEFAULT_CACHE_TTL_MINUTES: u64 = 60;
+/// Nombre maximum d'entrées dans le cache.
+pub const DEFAULT_CACHE_MAX_ENTRIES: usize = 500;
+
+/// Cache mémoire simple avec TTL et éviction LRU.
 pub struct Cache {
     store: Mutex<HashMap<String, CacheEntry>>,
     ttl: Duration,
@@ -14,6 +19,7 @@ pub struct Cache {
 struct CacheEntry {
     value: String,
     expires_at: Instant,
+    last_accessed: Instant,
 }
 
 impl Cache {
@@ -34,8 +40,9 @@ impl Cache {
 
     pub fn get(&self, key: &str) -> Option<String> {
         let mut store = self.store.lock().unwrap();
-        if let Some(entry) = store.get(key) {
+        if let Some(entry) = store.get_mut(key) {
             if entry.expires_at > Instant::now() {
+                entry.last_accessed = Instant::now();
                 return Some(entry.value.clone());
             }
             store.remove(key);
@@ -46,15 +53,34 @@ impl Cache {
     pub fn set(&self, key: String, value: String) {
         let mut store = self.store.lock().unwrap();
         if store.len() >= self.max_entries {
-            store.clear();
+            Self::evict_lru(&mut store);
         }
+        let now = Instant::now();
         store.insert(
             key,
             CacheEntry {
                 value,
-                expires_at: Instant::now() + self.ttl,
+                expires_at: now + self.ttl,
+                last_accessed: now,
             },
         );
+    }
+
+    fn evict_lru(store: &mut HashMap<String, CacheEntry>) {
+        let now = Instant::now();
+        // Supprime d'abord les entrées expirées.
+        store.retain(|_, entry| entry.expires_at > now);
+
+        // Si toujours plein, supprime l'entrée la moins récemment utilisée.
+        if store.len() >= DEFAULT_CACHE_MAX_ENTRIES {
+            if let Some(oldest_key) = store
+                .iter()
+                .min_by_key(|(_, entry)| entry.last_accessed)
+                .map(|(key, _)| key.clone())
+            {
+                store.remove(&oldest_key);
+            }
+        }
     }
 
     pub fn invalidate_user(&self, user_id: &str) {
@@ -63,6 +89,9 @@ impl Cache {
     }
 
     pub fn len(&self) -> usize {
-        self.store.lock().unwrap().len()
+        let mut store = self.store.lock().unwrap();
+        let now = Instant::now();
+        store.retain(|_, entry| entry.expires_at > now);
+        store.len()
     }
 }

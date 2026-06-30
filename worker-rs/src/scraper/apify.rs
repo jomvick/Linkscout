@@ -1,10 +1,15 @@
 use crate::models::job::RawJob;
+use crate::retry::{with_retry, RetryOutcome};
 use crate::scraper::JobSource;
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::Value;
+use std::sync::Arc;
+use tokio::time::Duration;
 
 const APIFY_API: &str = "https://api.apify.com/v2";
+const APIFY_MAX_ATTEMPTS: u32 = 3;
+const APIFY_BASE_DELAY: Duration = Duration::from_millis(500);
 
 #[derive(Clone)]
 pub struct ApifyScraper {
@@ -36,23 +41,27 @@ impl ApifyScraper {
 
         let safe_actor_id = self.actor_id.replace("/", "~");
         let url = format!(
-            "{}/acts/{}/run-sync-get-dataset-items?token={}&timeout=120",
-            APIFY_API, safe_actor_id, self.token
+            "{}/acts/{}/run-sync-get-dataset-items?timeout=120",
+            APIFY_API, safe_actor_id
         );
 
-        let resp = self
-            .http
-            .post(&url)
-            .json(&input)
-            .send()
-            .await
-            .map_err(|e| format!("Apify request failed: {}", e))?;
+        let http = Arc::new(self.http.clone());
+        let token = Arc::new(self.token.clone());
+        let url = Arc::new(url);
+        let input = Arc::new(input);
 
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
-            return Err(format!("Apify returned {}: {}", status, body));
-        }
+        let resp = with_retry(
+            move || {
+                let http = Arc::clone(&http);
+                let token = Arc::clone(&token);
+                let url = Arc::clone(&url);
+                let input = Arc::clone(&input);
+                async move { send_apify_request(&http, &token, &url, &input).await }
+            },
+            APIFY_MAX_ATTEMPTS,
+            APIFY_BASE_DELAY,
+        )
+        .await?;
 
         resp.json::<Vec<Value>>()
             .await
@@ -126,5 +135,46 @@ impl JobSource for ApifyScraper {
                 vec![]
             }
         }
+    }
+}
+
+async fn send_apify_request(
+    http: &Client,
+    token: &str,
+    url: &str,
+    input: &Value,
+) -> RetryOutcome<reqwest::Response, String> {
+    match http
+        .post(url)
+        .bearer_auth(token)
+        .json(input)
+        .send()
+        .await
+    {
+        Ok(resp) => classify_apify_response(resp).await,
+        Err(e) => {
+            let msg = format!("Apify request failed: {}", e);
+            tracing::warn!("{} (retryable)", msg);
+            RetryOutcome::Retry(msg)
+        }
+    }
+}
+
+async fn classify_apify_response(
+    resp: reqwest::Response,
+) -> RetryOutcome<reqwest::Response, String> {
+    let status = resp.status();
+    if status.is_success() {
+        RetryOutcome::Ok(resp)
+    } else if status.is_server_error() || status == 429 {
+        let body = resp.text().await.unwrap_or_default();
+        let msg = format!("Apify returned {}: {}", status, body);
+        tracing::warn!("{} (retryable)", msg);
+        RetryOutcome::Retry(msg)
+    } else {
+        let body = resp.text().await.unwrap_or_default();
+        let msg = format!("Apify returned {}: {}", status, body);
+        tracing::error!("{}", msg);
+        RetryOutcome::Fail(msg)
     }
 }
