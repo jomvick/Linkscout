@@ -34,10 +34,6 @@ function slugify(name: string): string {
  * 3. unavatar .ai  — startups IA
  * 4. unavatar .co  — SaaS divers
  * 5. Initiales     — fallback final garanti
- *
- * unavatar.io agrège : Twitter, GitHub, DuckDuckGo, Clearbit (s'il revient),
- * et le favicon du site. Avec ?fallback=false il renvoie 404 si introuvable
- * → onError se déclenche et on passe à la source suivante.
  */
 function buildSources(companyName: string, logoUrl?: string | null): string[] {
   const slug = slugify(companyName);
@@ -47,8 +43,7 @@ function buildSources(companyName: string, logoUrl?: string | null): string[] {
 
   if (slug) {
     for (const tld of ["com", "io", "ai", "co"]) {
-      const url = `https://unavatar.io/${slug}.${tld}?fallback=false`;
-      // Déduplique si logo_url est déjà la même URL
+      const url = `https://unavatar.io/${slug}.${tld}`;
       if (!sources.includes(url)) sources.push(url);
     }
   }
