@@ -128,7 +128,9 @@ async fn main() {
     let app = Router::new()
         .merge(api_strict)
         .merge(api_optional)
+        .route("/", get(|| async { "OK" }))
         .route("/health", get(health::handle))
+        .route("/api/health", get(health::handle))
         .layer(
             CorsLayer::new()
                 .allow_origin(AllowOrigin::predicate(move |origin: &HeaderValue, _parts: &RequestParts| {
