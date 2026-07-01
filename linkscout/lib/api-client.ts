@@ -36,7 +36,20 @@ export async function apiScrape(
     headers,
     body: JSON.stringify({ keyword, limit }),
   });
-  return res.json();
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error(`[apiScrape] HTTP ${res.status}: ${text.slice(0, 300)}`);
+    return { success: false, keyword, jobs: [], error: `HTTP ${res.status}` };
+  }
+
+  try {
+    return await res.json();
+  } catch {
+    const text = await res.text().catch(() => "");
+    console.error(`[apiScrape] Invalid JSON (${text.length} chars):`, text.slice(0, 300));
+    return { success: false, keyword, jobs: [], error: "Réponse invalide du service de scraping" };
+  }
 }
 
 // ── Natural language intent → LinkedIn search keywords ────────────────────────
@@ -161,6 +174,19 @@ export async function apiAnalyze(params: {
     headers,
     body: JSON.stringify(body),
   });
-  return res.json();
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error(`[apiAnalyze] HTTP ${res.status}: ${text.slice(0, 300)}`);
+    return { success: false, error: `HTTP ${res.status}` };
+  }
+
+  try {
+    return await res.json();
+  } catch {
+    const text = await res.text().catch(() => "");
+    console.error(`[apiAnalyze] Invalid JSON (${text.length} chars):`, text.slice(0, 300));
+    return { success: false, error: "Réponse invalide du service d'analyse" };
+  }
 }
 
