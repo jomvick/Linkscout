@@ -15,7 +15,7 @@ const SKIP_LOCALE = ["/api/", "/auth/", "/_next/", "/favicon", "/icon.svg", "/ap
 
 // Routes API accessibles sans authentification (recherche invitée, etc.)
 // NOTE : /api/auth est déjà exempté séparément (login/signup/callback).
-const PUBLIC_API_ROUTES = ["/api/intent"];
+const PUBLIC_API_ROUTES = ["/api/intent", "/api/jobs", "/api/worker", "/api/ping-backend", "/api/alerts/trigger"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
