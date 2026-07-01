@@ -19,6 +19,6 @@ pub async fn handle(
 ) -> Json<QuotaResponse> {
     Json(QuotaResponse {
         success: true,
-        quota: state.quota.peek(&user.id),
+        quota: state.quota.peek(&user.id).await,
     })
 }

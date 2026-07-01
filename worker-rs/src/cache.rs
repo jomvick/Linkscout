@@ -4,10 +4,23 @@ use std::hash::{Hash, Hasher};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-/// Durée de vie par défaut des entrées (minutes).
 pub const DEFAULT_CACHE_TTL_MINUTES: u64 = 60;
-/// Nombre maximum d'entrées dans le cache.
 pub const DEFAULT_CACHE_MAX_ENTRIES: usize = 500;
+
+/// Trait asynchrone partagé pour tous les backends de cache.
+#[async_trait::async_trait]
+pub trait CacheProvider: Send + Sync {
+    async fn get(&self, key: &str) -> Option<String>;
+    async fn set(&self, key: String, value: String);
+}
+
+/// Génère une clé de cache déterministe pour les résultats de scraping.
+pub fn make_cache_key(user_id: &str, prefix: &str, description: &str, keyword: &str) -> String {
+    let mut hasher = DefaultHasher::new();
+    description.hash(&mut hasher);
+    keyword.hash(&mut hasher);
+    format!("cache:jobs:{}:{}:{:016x}", user_id, prefix, hasher.finish())
+}
 
 /// Cache mémoire simple avec TTL et éviction LRU.
 pub struct Cache {
@@ -30,16 +43,12 @@ impl Cache {
             max_entries,
         }
     }
+}
 
-    pub fn make_key(user_id: &str, prefix: &str, description: &str, keyword: &str) -> String {
-        let mut hasher = DefaultHasher::new();
-        description.hash(&mut hasher);
-        keyword.hash(&mut hasher);
-        format!("{}:{}:{:016x}", user_id, prefix, hasher.finish())
-    }
-
-    pub fn get(&self, key: &str) -> Option<String> {
-        let mut store = self.store.lock().unwrap();
+#[async_trait::async_trait]
+impl CacheProvider for Cache {
+    async fn get(&self, key: &str) -> Option<String> {
+        let mut store = self.store.lock().expect("cache mutex poisoned");
         if let Some(entry) = store.get_mut(key) {
             if entry.expires_at > Instant::now() {
                 entry.last_accessed = Instant::now();
@@ -50,8 +59,8 @@ impl Cache {
         None
     }
 
-    pub fn set(&self, key: String, value: String) {
-        let mut store = self.store.lock().unwrap();
+    async fn set(&self, key: String, value: String) {
+        let mut store = self.store.lock().expect("cache mutex poisoned");
         if store.len() >= self.max_entries {
             Self::evict_lru(&mut store);
         }
@@ -65,13 +74,13 @@ impl Cache {
             },
         );
     }
+}
 
+impl Cache {
     fn evict_lru(store: &mut HashMap<String, CacheEntry>) {
         let now = Instant::now();
-        // Supprime d'abord les entrées expirées.
         store.retain(|_, entry| entry.expires_at > now);
 
-        // Si toujours plein, supprime l'entrée la moins récemment utilisée.
         if store.len() >= DEFAULT_CACHE_MAX_ENTRIES {
             if let Some(oldest_key) = store
                 .iter()
@@ -81,17 +90,5 @@ impl Cache {
                 store.remove(&oldest_key);
             }
         }
-    }
-
-    pub fn invalidate_user(&self, user_id: &str) {
-        let mut store = self.store.lock().unwrap();
-        store.retain(|k, _| !k.starts_with(&format!("{}:", user_id)));
-    }
-
-    pub fn len(&self) -> usize {
-        let mut store = self.store.lock().unwrap();
-        let now = Instant::now();
-        store.retain(|_, entry| entry.expires_at > now);
-        store.len()
     }
 }

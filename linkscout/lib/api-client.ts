@@ -21,6 +21,8 @@ export interface ScrapeResult {
   keyword: string;
   jobs: Record<string, unknown>[];
   error?: string;
+  guest?: boolean;
+  persisted?: boolean;
 }
 
 /** Trigger a LinkedIn scrape for the given keyword via the Rust worker. */

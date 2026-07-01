@@ -7,6 +7,8 @@ import { apiAnalyze } from "@/lib/api-client";
 import type { Job } from "@/lib/types";
 import { updateJob, getJobs } from "@/lib/store";
 import { useDashboard } from "@/context/DashboardContext";
+import { GuestCredits } from "@/lib/guest-credits";
+import { useGuestGate, type GatedFeature } from "@/hooks/useGuestGate";
 import { useFirstUse } from "@/hooks/useFirstUse";
 import Topbar from "@/components/Topbar";
 import SearchView from "@/components/SearchView";
@@ -158,6 +160,7 @@ export default function DashboardClient() {
     favorites,
     toggleFavorite,
     isAuthed,
+    isGuest,
     resumeText,
     searching,
     analyzing,
@@ -167,20 +170,28 @@ export default function DashboardClient() {
     refreshStats,
   } = useDashboard();
 
+  const { gate } = useGuestGate(isAuthed);
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q") || "";
   const [searchValue, setSearchValue] = useState(urlQuery || query);
   const [filters, setFilters] = useState<FilterState>({
-    providers: ["linkedin_guest", "wttj", "indeed"],
+    providers: ["linkedin_guest"],
     contractTypes: ["cdi", "freelance", "cdd", "stage"],
     remotes: ["full_remote", "hybrid", "on_site"],
   });
   const [showFilters, setShowFilters] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [guestCredits, setGuestCredits] = useState(5);
   const { showWizard, completeOnboarding, hasDoneFirstSearch, onFirstSearch } =
     useFirstUse();
+
+  useEffect(() => {
+    setMounted(true);
+    if (!isAuthed) setGuestCredits(GuestCredits.remaining());
+  }, [isAuthed]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -194,10 +205,15 @@ export default function DashboardClient() {
   const handleAnalyze = useCallback(
     async (job: Job) => {
       if (!job.description || job.summary) return;
+
       if (!isAuthed) {
-        router.push("/login");
-        return;
+        if (GuestCredits.remaining() <= 0) {
+          gate("credits");
+          return;
+        }
+        setGuestCredits(GuestCredits.consume());
       }
+
       setAnalyzing(true);
       try {
         const data = await apiAnalyze({
@@ -229,7 +245,7 @@ export default function DashboardClient() {
       }
       setAnalyzing(false);
     },
-    [query, resumeText, isAuthed, router, setAnalyzing, refreshStats, setSelected, selected],
+    [query, resumeText, isAuthed, gate, setAnalyzing, refreshStats, setSelected, selected],
   );
 
   const handleSelect = useCallback(
@@ -240,24 +256,35 @@ export default function DashboardClient() {
     [handleAnalyze, setSelected],
   );
 
+  const navigate = useCallback(
+    (id: View) => {
+      if (id === "dashboard" || isAuthed) {
+        setView(id);
+        return;
+      }
+      if (gate(id as GatedFeature)) setView(id);
+    },
+    [setView, isAuthed, gate],
+  );
+
   const handleCommand = useCallback(
     (actionId: string) => {
-      if (actionId === "favorites") setView("favorites");
-      else if (actionId === "alerts") setView("alerts");
-      else if (actionId === "history") setView("history");
+      if (actionId === "favorites") navigate("favorites");
+      else if (actionId === "alerts") navigate("alerts");
+      else if (actionId === "history") navigate("history");
       else if (actionId === "settings" || actionId === "cv")
-        setView("settings");
-      else setView("dashboard");
+        navigate("settings");
+      else navigate("dashboard");
     },
-    [setView],
+    [navigate],
   );
 
   const handleNav = useCallback(
     (id: View) => {
-      setView(id);
+      navigate(id);
       setMobileMenuOpen(false);
     },
-    [setView],
+    [navigate],
   );
 
 
@@ -305,7 +332,14 @@ export default function DashboardClient() {
           <div className="flex flex-col flex-1 overflow-hidden" key="dashboard">
             <div className="shrink-0 px-4 py-3 border-b border-border/40 bg-surface/50 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-text-secondary">Filters</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-text-secondary">Filters</span>
+                  {mounted && !isAuthed && (
+                    <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/20">
+                      {guestCredits} / 5 analyses
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className="text-xs font-medium text-brand hover:underline"
@@ -390,11 +424,11 @@ export default function DashboardClient() {
             {NAV_ITEMS.map((item) => {
               const isActive = view === item.id;
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setView(item.id)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 relative ${
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigate(item.id)}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 relative ${
                     isActive
                       ? "text-brand"
                       : "text-text-secondary/60 hover:bg-canvas/60 hover:text-text-primary"
@@ -422,7 +456,7 @@ export default function DashboardClient() {
           <div className="border-t border-border px-2 py-3">
             <button
               type="button"
-              onClick={() => setView("settings")}
+              onClick={() => navigate("settings")}
               className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 relative ${
                 view === "settings"
                   ? "text-brand"

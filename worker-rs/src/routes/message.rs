@@ -33,7 +33,7 @@ pub async fn handle(
     Extension(user): Extension<AuthenticatedUser>,
     Json(req): Json<PitchRequest>,
 ) -> Result<Json<PitchResponse>, (StatusCode, Json<serde_json::Value>)> {
-    if let Err(q) = state.quota.check_and_increment(&user.id) {
+    if let Err(q) = state.quota.check_and_increment(&user.id).await {
         return Err((
             StatusCode::TOO_MANY_REQUESTS,
             Json(json!({
@@ -56,7 +56,7 @@ pub async fn handle(
         )
         .await;
 
-    let quota_info = state.quota.peek(&user.id);
+    let quota_info = state.quota.peek(&user.id).await;
 
     match pitch {
         Some(p) => {

@@ -12,6 +12,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { apiScrape } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { mapJob } from "@/lib/job-mapper";
+import { GuestSession } from "@/lib/guest-session";
 
 import { getJobs, addJobs, type JobDraft } from "@/lib/store";
 import { cacheStore } from "@/lib/cache/cacheStore";
@@ -47,6 +48,7 @@ interface DashboardContextType {
   favorites: Set<string>;
   toggleFavorite: (jobId: string) => Promise<void>;
   isAuthed: boolean;
+  isGuest: boolean;
   resumeText: string;
   useResumeMatch: boolean;
   refreshStats: () => void;
@@ -112,6 +114,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [currentKeyword, setCurrentKeyword] = useState(query);
   const [favorites, setFavorites] = useState<Set<string>>(loadFavorites);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
   const [resumeText, setResumeText] = useState("");
   const [useResumeMatch, setUseResumeMatch] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -124,7 +127,17 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const current = getJobs();
-    if (current.length > 0) setJobs(current);
+    if (current.length > 0) {
+      setJobs(current);
+      return;
+    }
+    // Restore guest session on hard refresh
+    const session = GuestSession.load();
+    if (session) {
+      setJobs(session.jobs);
+      setIsGuest(true);
+      setCurrentKeyword(session.keyword);
+    }
   }, []);
 
   const loadSupabaseData = useCallback(
@@ -197,7 +210,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         setIsAuthed(true);
+        setIsGuest(false);
         setUserId(session.user.id);
+        GuestSession.clear();
         setCurrentKeyword("");
         loadSupabaseData(supabase, session.user.id).then(() => {
           fetch("/api/resume")
@@ -216,6 +231,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         });
       } else if (event === "SIGNED_OUT") {
         setIsAuthed(false);
+        setIsGuest(false);
         setUserId(null);
         setFavorites(loadFavorites());
         setHistory([]);
@@ -290,11 +306,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         `/api/jobs${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ""}`,
       );
       if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          addJobs(data as JobDraft[]);
+        const body = await res.json();
+        const jobs = Array.isArray(body) ? body : body.jobs;
+        if (Array.isArray(jobs) && jobs.length > 0) {
+          addJobs(jobs as JobDraft[]);
           setJobs(getJobs());
-          if (cacheKey) cacheStore.setSession(cacheKey, getJobs(), 15);
+          if (cacheKey && !body.degraded) cacheStore.setSession(cacheKey, getJobs(), 15);
         }
       }
     } catch (err) {
@@ -353,6 +370,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       }
 
       setSearching(true);
+      setIsGuest(false);
       setActiveView("dashboard");
       setCurrentKeyword(trimmed);
       try {
@@ -361,11 +379,16 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           const mapped = data.jobs.map(
             (j: Record<string, unknown>) => mapJob(j)
           );
+          const isGuestUser = data.guest === true;
+          setIsGuest(isGuestUser);
           addJobs(mapped);
           setJobs(getJobs());
-          cacheStore.setSession(cacheKey, getJobs(), 15);
-          // Save to history after successful scrape
-          saveToHistory(trimmed, mapped.length);
+          if (isGuestUser) {
+            GuestSession.save(trimmed, getJobs());
+          } else {
+            cacheStore.setSession(cacheKey, getJobs(), 15);
+            saveToHistory(trimmed, mapped.length);
+          }
         }
         router.push(`/dashboard?q=${encodeURIComponent(trimmed)}`, {
           scroll: false,
@@ -598,6 +621,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         favorites,
         toggleFavorite,
         isAuthed,
+        isGuest,
         resumeText,
         useResumeMatch,
         refreshStats,

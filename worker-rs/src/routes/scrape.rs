@@ -27,6 +27,10 @@ pub struct ScrapeResponse {
     keyword: String,
     jobs: Vec<Job>,
     error: Option<String>,
+    /// true si l'utilisateur n'était pas connecté (pas de persistance DB)
+    guest: bool,
+    /// true si les jobs ont été persistés en Supabase
+    persisted: bool,
 }
 
 pub async fn handle(
@@ -41,16 +45,16 @@ pub async fn handle(
         ));
     }
 
-    let actual_limit = if user_opt.is_some() {
-        200 // Pas de limite (ou limite très haute) pour les connectés
+    let (actual_limit, is_authenticated) = if user_opt.is_some() {
+        (req.limit.clamp(1, 200), true)
     } else {
-        10  // 10 max pour les non-connectés
+        (25u32, false) // 1 page pour les guests
     };
 
     tracing::info!("Starting scrape for keyword: {}, limit: {}", req.keyword, actual_limit);
 
     // 1. LinkedIn (Guest Scraper)
-    let scraper = GuestScraper::new(state.http.clone(), 3);
+    let scraper = GuestScraper::new(state.http.clone(), 3).with_auth(is_authenticated);
     tracing::info!("Running GuestScraper (LinkedIn)");
 
     let raw_jobs = scraper.search(&req.keyword, actual_limit).await;
@@ -83,10 +87,14 @@ pub async fn handle(
         jobs.push(job);
     }
 
+    let is_guest = user_opt.is_none();
+
     Ok(Json(ScrapeResponse {
         success: true,
         keyword: req.keyword,
         jobs,
         error: None,
+        guest: is_guest,
+        persisted: !is_guest,
     }))
 }

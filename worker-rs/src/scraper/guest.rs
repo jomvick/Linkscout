@@ -1,6 +1,7 @@
 use crate::models::job::RawJob;
 use crate::scraper::JobSource;
 use async_trait::async_trait;
+use chrono::{DateTime, TimeDelta, Utc};
 use rand::seq::SliceRandom;
 use regex::Regex;
 use scraper::{Html, Selector};
@@ -9,6 +10,7 @@ use tokio::sync::Semaphore;
 
 const GUEST_API: &str =
     "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search";
+const GUEST_BATCH_LIMIT: u32 = 25;
 
 static USER_AGENTS: &[&str] = &[
     "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
@@ -21,7 +23,6 @@ static USER_AGENTS: &[&str] = &[
 static JOB_ID_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"/jobs/view/.+-(\d+)").unwrap());
 
-// Marqueurs de fin de description (boilerplate LinkedIn)
 static BOILERPLATE_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"(?i)(about the company|a propos de l'entreprise|equal opportunity employer|processus de recrutement|recruitment process|talent community|join our talent|nous recrutons)",
@@ -29,9 +30,15 @@ static BOILERPLATE_RE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+/// Extracts a relative time value like "2" from "2 days ago" or "il y a 2 jours"
+static RELATIVE_TIME_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(\d+)\s*(hour|heure|day|jour|week|semaine|month|mois)").unwrap()
+});
+
 pub struct GuestScraper {
     http: reqwest::Client,
     sem: Semaphore,
+    is_authenticated: bool,
 }
 
 impl GuestScraper {
@@ -39,43 +46,122 @@ impl GuestScraper {
         Self {
             http,
             sem: Semaphore::new(concurrency),
+            is_authenticated: false,
         }
     }
 
-    async fn fetch_listings(&self, keyword: &str, limit: u32) -> Vec<(String, String, String, String)> {
-        let batch = limit.min(25);
-        let ua = USER_AGENTS.choose(&mut rand::thread_rng()).unwrap_or(&USER_AGENTS[0]);
-        let params = [
-            ("keywords", keyword.to_string()),
-            ("location", String::new()),
-            ("start", "0".into()),
-            ("count", batch.to_string()),
-        ];
-
-        let resp = self
-            .http
-            .get(GUEST_API)
-            .header("User-Agent", *ua)
-            .header("Accept-Language", "fr-FR,fr;q=0.9")
-            .query(&params)
-            .send()
-            .await;
-
-        let html = match resp {
-            Ok(r) if r.status().is_success() => r.text().await.unwrap_or_default(),
-            _ => return vec![],
-        };
-
-        Self::parse_listings(&html)
+    pub fn with_auth(mut self, authenticated: bool) -> Self {
+        self.is_authenticated = authenticated;
+        self
     }
 
-    fn parse_listings(html: &str) -> Vec<(String, String, String, String)> {
+    fn relative_to_ts(text: &str) -> Option<DateTime<Utc>> {
+        let now = Utc::now();
+        let lower = text.trim().to_lowercase();
+
+        if lower.contains("just now")
+            || lower.contains("à l'instant")
+            || lower == "today"
+            || lower == "aujourd'hui"
+        {
+            return Some(now);
+        }
+
+        if let Some(caps) = RELATIVE_TIME_RE.captures(&lower) {
+            let num: i64 = caps.get(1)?.as_str().parse().ok()?;
+            let unit = caps.get(2)?.as_str();
+
+            let delta = match unit {
+                "hour" | "heure" => TimeDelta::try_hours(num)?,
+                "day" | "jour" => TimeDelta::try_days(num)?,
+                "week" | "semaine" => TimeDelta::try_weeks(num)?,
+                "month" | "mois" => TimeDelta::try_days(num * 30)?,
+                _ => return None,
+            };
+
+            return Some(now - delta);
+        }
+
+        None
+    }
+
+    async fn fetch_listings(
+        &self,
+        keyword: &str,
+        limit: u32,
+    ) -> Vec<(String, String, String, String, Option<DateTime<Utc>>)> {
+        let max_results = if self.is_authenticated {
+            limit
+        } else {
+            limit.min(GUEST_BATCH_LIMIT)
+        };
+
+        let mut all_results = Vec::new();
+        let mut start = 0u32;
+
+        loop {
+            let batch = GUEST_BATCH_LIMIT.min(max_results - all_results.len() as u32);
+            if batch == 0 {
+                break;
+            }
+
+            let ua = USER_AGENTS
+                .choose(&mut rand::thread_rng())
+                .unwrap_or(&USER_AGENTS[0]);
+            let params = [
+                ("keywords", keyword.to_string()),
+                ("location", String::new()),
+                ("start", start.to_string()),
+                ("count", batch.to_string()),
+            ];
+
+            let resp = self
+                .http
+                .get(GUEST_API)
+                .header("User-Agent", *ua)
+                .header("Accept-Language", "fr-FR,fr;q=0.9")
+                .query(&params)
+                .send()
+                .await;
+
+            let html = match resp {
+                Ok(r) if r.status().is_success() => r.text().await.unwrap_or_default(),
+                _ => break,
+            };
+
+            let batch_results = Self::parse_listings(&html);
+            if batch_results.is_empty() {
+                break;
+            }
+
+            let remaining = max_results - all_results.len() as u32;
+            for item in batch_results.into_iter().take(remaining as usize) {
+                all_results.push(item);
+            }
+
+            if !self.is_authenticated || all_results.len() as u32 >= max_results {
+                break;
+            }
+
+            start += GUEST_BATCH_LIMIT;
+        }
+
+        all_results
+    }
+
+    fn parse_listings(
+        html: &str,
+    ) -> Vec<(String, String, String, String, Option<DateTime<Utc>>)> {
         let doc = Html::parse_document(html);
         let card_sel = Selector::parse(".job-search-card").unwrap();
         let link_sel = Selector::parse("a.base-card__full-link").unwrap();
         let title_sel = Selector::parse(".base-search-card__title").unwrap();
         let company_sel = Selector::parse(".base-search-card__subtitle").unwrap();
         let location_sel = Selector::parse(".job-search-card__location").unwrap();
+        let date_sel = Selector::parse(
+            ".job-search-card__listdate, time, .job-search-card__listdate--new",
+        )
+        .unwrap();
 
         let mut results = Vec::new();
 
@@ -112,8 +198,14 @@ impl GuestScraper {
                 .map(|e| e.text().collect::<String>().trim().to_string())
                 .unwrap_or_default();
 
+            let posted_at = card
+                .select(&date_sel)
+                .next()
+                .map(|e| e.text().collect::<String>().trim().to_string())
+                .and_then(|s| Self::relative_to_ts(&s));
+
             let url = href.split('?').next().unwrap_or(href).to_string();
-            results.push((url, title, company, location));
+            results.push((url, title, company, location, posted_at));
         }
 
         results
@@ -128,7 +220,9 @@ impl GuestScraper {
 
     async fn fetch_detail(&self, url: &str) -> Option<String> {
         let _permit = self.sem.acquire().await.ok()?;
-        let ua = USER_AGENTS.choose(&mut rand::thread_rng()).unwrap_or(&USER_AGENTS[0]);
+        let ua = USER_AGENTS
+            .choose(&mut rand::thread_rng())
+            .unwrap_or(&USER_AGENTS[0]);
 
         let resp = self
             .http
@@ -164,7 +258,6 @@ impl GuestScraper {
             .trim()
             .to_string();
 
-        // Réduit les sauts de ligne excessifs
         let re = Regex::new(r"\n{3,}").unwrap();
         re.replace_all(&cleaned, "\n\n").to_string()
     }
@@ -181,7 +274,7 @@ impl JobSource for GuestScraper {
         let actual = listings.len().min(limit as usize);
 
         let mut jobs = Vec::with_capacity(actual);
-        for (url, title, company, location) in listings.iter().take(actual) {
+        for (url, title, company, location, posted_at) in listings.iter().take(actual) {
             let description = self.fetch_detail(url).await.unwrap_or_default();
             jobs.push(RawJob {
                 title: title.clone(),
@@ -191,7 +284,7 @@ impl JobSource for GuestScraper {
                 url: url.clone(),
                 source: "linkedin_guest".into(),
                 keyword: keyword.to_string(),
-                posted_at: None,
+                posted_at: *posted_at,
             });
         }
 

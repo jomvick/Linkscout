@@ -2,34 +2,59 @@ import { NextRequest, NextResponse } from "next/server";
 import { mapJob } from "@/lib/job-mapper";
 import { getJobs } from "@/lib/store";
 import { createClient } from "@/lib/supabase/server";
+import type { Job } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-/** Return all jobs ordered by match score (with fallback to in-memory store). */
+interface JobsResponse {
+  jobs: Job[];
+  degraded: boolean;
+}
+
+/** Return jobs, optionally filtered by keyword. degraded=true when served from memory cache. */
 export async function GET(request: NextRequest) {
-  // Suppress unused var warning — kept for future filtering
-  void request;
+  const { searchParams } = new URL(request.url);
+  const keyword = searchParams.get("keyword")?.trim() || null;
 
   try {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
-      .from("jobs")
-      .select("*")
+    let query = supabase.from("jobs").select("*");
+    if (keyword) {
+      query = query.ilike("title", `%${keyword}%`);
+    }
+    const { data, error } = await query
       .order("match_score", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(100);
 
     if (!error && data) {
       const jobs = data.map((row) => mapJob(row as Record<string, unknown>));
-      return NextResponse.json(jobs);
+      return NextResponse.json({ jobs, degraded: false } satisfies JobsResponse);
     }
 
-    // Fallback: in-memory store (dev mode or DB unavailable)
-    return NextResponse.json(getJobs());
+    // Degraded: serve from in-memory cache (guest or DB unavailable)
+    let allJobs = getJobs();
+    if (keyword) {
+      const kw = keyword.toLowerCase();
+      allJobs = allJobs.filter(
+        (j) =>
+          j.title.toLowerCase().includes(kw) ||
+          j.company.toLowerCase().includes(kw),
+      );
+    }
+    return NextResponse.json({ jobs: allJobs, degraded: true } satisfies JobsResponse);
   } catch (err) {
     console.error("[Jobs] GET error:", err);
-    // Fallback to in-memory store on error so the dashboard stays usable
-    return NextResponse.json(getJobs());
+    let allJobs = getJobs();
+    const kw = keyword?.toLowerCase();
+    if (kw) {
+      allJobs = allJobs.filter(
+        (j) =>
+          j.title.toLowerCase().includes(kw) ||
+          j.company.toLowerCase().includes(kw),
+      );
+    }
+    return NextResponse.json({ jobs: allJobs, degraded: true } satisfies JobsResponse);
   }
 }

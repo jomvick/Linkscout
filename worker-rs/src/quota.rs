@@ -4,14 +4,21 @@ use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 
-/// Suivi des quotas API par utilisateur.
-/// Thread-safe, reset périodique.
-pub struct QuotaTracker {
-    store: Mutex<HashMap<String, UserQuota>>,
-    /// Nombre max d'appels autorisés par fenêtre
-    max_per_window: u32,
-    /// Durée de la fenêtre (secondes)
-    window_secs: u64,
+pub const QUOTA_MAX_PER_WINDOW: u32 = 100;
+pub const QUOTA_WINDOW_MINUTES: u64 = 1440;
+pub const GUEST_MAX_CREDITS: i64 = 5;
+
+/// Trait asynchrone partagé pour tous les backends de quota.
+#[async_trait::async_trait]
+pub trait QuotaProvider: Send + Sync {
+    async fn check_and_increment(&self, user_id: &str) -> Result<QuotaInfo, QuotaInfo>;
+    async fn peek(&self, user_id: &str) -> QuotaInfo;
+    async fn reset_user(&self, user_id: &str);
+
+    /// Vérifie et consomme un crédit guest. Retourne false si quota épuisé.
+    async fn check_and_consume_guest_quota(&self, guest_id: &str, limit: i64) -> bool;
+    /// Retourne le nombre de crédits restants pour un guest.
+    async fn get_remaining_credits(&self, guest_id: &str, max_credits: i64) -> i64;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +27,13 @@ pub struct QuotaInfo {
     pub limit: u32,
     pub remaining: u32,
     pub resets_in_secs: u64,
+}
+
+/// Suivi des quotas API par utilisateur en mémoire.
+pub struct QuotaTracker {
+    store: Mutex<HashMap<String, UserQuota>>,
+    max_per_window: u32,
+    window_secs: u64,
 }
 
 struct UserQuota {
@@ -35,78 +49,79 @@ impl QuotaTracker {
             window_secs: window_minutes * 60,
         }
     }
+}
 
-    /// Vérifie si l'utilisateur peut effectuer un appel.
-    /// Si oui, incrémente le compteur et retourne Ok(QuotaInfo).
-    /// Si non, retourne Err(QuotaInfo) avec remaining = 0.
-    pub fn check_and_increment(&self, user_id: &str) -> Result<QuotaInfo, QuotaInfo> {
-        let now = Instant::now();
-        let mut store = self.store.lock().unwrap();
-
-        let quota = store.entry(user_id.to_string()).or_insert(UserQuota {
-            count: 0,
-            window_start: now,
-        });
-
-        if now.duration_since(quota.window_start).as_secs() >= self.window_secs {
-            quota.count = 0;
-            quota.window_start = now;
-        }
-
+#[async_trait::async_trait]
+impl QuotaProvider for QuotaTracker {
+    async fn check_and_increment(&self, user_id: &str) -> Result<QuotaInfo, QuotaInfo> {
+        let mut store = self.store.lock().expect("quota mutex poisoned");
+        let quota = Self::get_or_create_quota(&mut store, self.window_secs, user_id);
         quota.count += 1;
-        let used = quota.count;
-        let remaining = if used > self.max_per_window {
-            0
-        } else {
-            self.max_per_window - used
-        };
-        let resets_in_secs = self.window_secs.saturating_sub(
-            now.duration_since(quota.window_start).as_secs(),
-        );
-
-        let info = QuotaInfo {
-            used,
-            limit: self.max_per_window,
-            remaining,
-            resets_in_secs,
-        };
-
-        if used > self.max_per_window {
+        let info = Self::build_quota_info(quota, self.max_per_window, self.window_secs);
+        if quota.count > self.max_per_window {
             Err(info)
         } else {
             Ok(info)
         }
     }
 
-    /// Retourne les infos quota sans incrémenter.
-    pub fn peek(&self, user_id: &str) -> QuotaInfo {
-        let now = Instant::now();
-        let mut store = self.store.lock().unwrap();
+    async fn peek(&self, user_id: &str) -> QuotaInfo {
+        let mut store = self.store.lock().expect("quota mutex poisoned");
+        let quota = Self::get_or_create_quota(&mut store, self.window_secs, user_id);
+        Self::build_quota_info(quota, self.max_per_window, self.window_secs)
+    }
 
+    async fn reset_user(&self, user_id: &str) {
+        self.store.lock().unwrap().remove(user_id);
+    }
+
+    async fn check_and_consume_guest_quota(&self, guest_id: &str, limit: i64) -> bool {
+        let mut store = self.store.lock().expect("quota mutex poisoned");
+        let quota = Self::get_or_create_quota(&mut store, self.window_secs, guest_id);
+        if quota.count as i64 >= limit {
+            return false;
+        }
+        quota.count += 1;
+        true
+    }
+
+    async fn get_remaining_credits(&self, guest_id: &str, max_credits: i64) -> i64 {
+        let store = self.store.lock().expect("quota mutex poisoned");
+        if let Some(quota) = store.get(guest_id) {
+            max_credits - quota.count as i64
+        } else {
+            max_credits
+        }
+    }
+}
+
+impl QuotaTracker {
+    fn get_or_create_quota<'a>(
+        store: &'a mut HashMap<String, UserQuota>,
+        window_secs: u64,
+        user_id: &str,
+    ) -> &'a mut UserQuota {
+        let now = Instant::now();
         let quota = store.entry(user_id.to_string()).or_insert(UserQuota {
             count: 0,
             window_start: now,
         });
-
-        if now.duration_since(quota.window_start).as_secs() >= self.window_secs {
+        if now.duration_since(quota.window_start).as_secs() >= window_secs {
             quota.count = 0;
             quota.window_start = now;
         }
-
-        let remaining = self.max_per_window.saturating_sub(quota.count);
-        let resets_in_secs = self.window_secs.saturating_sub(
-            now.duration_since(quota.window_start).as_secs(),
-        );
-
-        QuotaInfo {
-            used: quota.count,
-            limit: self.max_per_window,
-            remaining,
-            resets_in_secs,
-        }
+        quota
     }
 
-    pub fn reset_user(&self, user_id: &str) {
-        self.store.lock().unwrap().remove(user_id);
+    fn build_quota_info(quota: &UserQuota, max_per_window: u32, window_secs: u64) -> QuotaInfo {
+        let resets_in_secs = window_secs.saturating_sub(
+            Instant::now().duration_since(quota.window_start).as_secs(),
+        );
+        QuotaInfo {
+            used: quota.count,
+            limit: max_per_window,
+            remaining: max_per_window.saturating_sub(quota.count),
+            resets_in_secs,
+        }
     }
 }

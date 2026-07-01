@@ -10,6 +10,7 @@ pub struct Config {
     pub supabase_url: String,
     pub supabase_anon_key: String,
     pub supabase_service_key: String,
+    pub redis_url: Option<String>,
     pub discord_webhook_url: Option<String>,
     pub cors_origin: Vec<String>,
 }
@@ -35,6 +36,7 @@ impl Config {
                 .expect("SUPABASE_ANON_KEY is required"),
             supabase_service_key: env::var("SUPABASE_SERVICE_KEY")
                 .expect("SUPABASE_SERVICE_KEY is required"),
+            redis_url: env::var("REDIS_URL").ok(),
             discord_webhook_url: env::var("DISCORD_WEBHOOK_URL").ok(),
             cors_origin: env::var("CORS_ORIGIN")
                 .unwrap_or_else(|_| "http://localhost:3000,https://linkscout-rust.vercel.app".to_string())

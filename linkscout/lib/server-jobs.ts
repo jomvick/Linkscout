@@ -5,31 +5,26 @@ import { mapJob } from "./job-mapper";
 
 type UnknownRecord = Record<string, unknown>;
 
-/** @deprecated Use mapJob from lib/job-mapper instead. Kept for backward compat. */
-export const mapJobRecord = mapJob;
+type DbClient = SupabaseClient;
 
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DbClient = SupabaseClient<any, any, any, any, any>;
-
-/** Resolve a Job from a payload (either inline job data or a DB lookup by jobId). */
+/** Resolve a Job from a payload (inline job data, DB lookup, or cache fallback). */
 export async function resolveJobFromPayload(
   payload: UnknownRecord,
   maybeSupabase?: DbClient | null,
 ): Promise<Job | null> {
-  const jobPayload = typeof payload.job === "object" && payload.job !== null
-    ? (payload.job as UnknownRecord)
-    : null;
+  const jobPayload =
+    typeof payload.job === "object" && payload.job !== null
+      ? (payload.job as UnknownRecord)
+      : null;
 
   if (jobPayload) {
     return mapJobRecord(jobPayload);
   }
 
   const jobId = typeof payload.jobId === "string" ? payload.jobId : null;
-  if (!jobId) {
-    return null;
-  }
+  if (!jobId) return null;
 
+  // 1. Primary: Supabase
   const client = maybeSupabase ?? null;
   if (client) {
     try {
@@ -43,21 +38,22 @@ export async function resolveJobFromPayload(
         return mapJobRecord(data as UnknownRecord);
       }
     } catch {
-      // Fall back to in-memory store below.
+      // fall through to cache
     }
   }
 
+  // 2. Fallback: in-memory cache
   return getJobs().find((job) => job.id === jobId) ?? null;
 }
 
-/** Persist job field updates to Supabase (with fallback to in-memory store). */
+/** Persist job field updates to Supabase with degraded cache fallback. */
 export async function persistJobUpdate(
   jobId: string | undefined,
   fields: Partial<Job>,
   maybeSupabase?: DbClient | null,
-): Promise<Job | null> {
+): Promise<{ job: Job | null; degraded: boolean }> {
   if (!jobId) {
-    return null;
+    return { job: null, degraded: false };
   }
 
   const client = maybeSupabase ?? null;
@@ -80,9 +76,7 @@ export async function persistJobUpdate(
       };
 
       Object.keys(dbPatch).forEach((key) => {
-        if (dbPatch[key] === undefined) {
-          delete dbPatch[key];
-        }
+        if (dbPatch[key] === undefined) delete dbPatch[key];
       });
 
       if (Object.keys(dbPatch).length > 0) {
@@ -96,13 +90,18 @@ export async function persistJobUpdate(
         if (!error && data) {
           const mapped = mapJobRecord(data as UnknownRecord);
           updateJob(jobId, mapped);
-          return mapped;
+          return { job: mapped, degraded: false };
         }
       }
     } catch {
-      // Fall back to in-memory update below.
+      // fall through to cache
     }
   }
 
-  return updateJob(jobId, fields);
+  // Degraded: cache-only update (guest or DB unavailable)
+  const cached = updateJob(jobId, fields);
+  return { job: cached, degraded: true };
 }
+
+/** @deprecated Use mapJob from lib/job-mapper instead. Kept for backward compat. */
+export const mapJobRecord = mapJob;

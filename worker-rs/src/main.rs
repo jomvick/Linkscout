@@ -2,12 +2,14 @@ mod ai;
 mod app_state;
 mod auth;
 mod cache;
+mod cache_redis;
 mod config;
 mod db;
 mod enrich;
 mod models;
 mod notify;
 mod quota;
+mod quota_redis;
 mod retry;
 mod routes;
 pub mod scraper;
@@ -27,10 +29,12 @@ use axum::http::request::Parts as RequestParts;
 
 use crate::app_state::AppState;
 use crate::auth::supabase::AuthClient;
-use crate::cache::{Cache, DEFAULT_CACHE_MAX_ENTRIES, DEFAULT_CACHE_TTL_MINUTES};
+use crate::cache::CacheProvider;
+use crate::cache_redis::RedisCache;
 use crate::config::Config;
 use crate::db::supabase::SupabaseClient;
-use crate::quota::QuotaTracker;
+use crate::quota::QuotaProvider;
+use crate::quota_redis::RedisQuota;
 use crate::routes::{analyze, enrich as enrich_route, health, message, quota as quota_route, resume as resume_route, scrape, webhook};
 
 #[tokio::main]
@@ -67,8 +71,31 @@ async fn main() {
         config.supabase_anon_key.clone(),
     );
 
-    let cache = Arc::new(Cache::new(DEFAULT_CACHE_TTL_MINUTES, DEFAULT_CACHE_MAX_ENTRIES));
-    let quota = Arc::new(QuotaTracker::new(QUOTA_MAX_PER_WINDOW, QUOTA_WINDOW_MINUTES));
+    // Initialize cache and quota — Redis if URL is set, otherwise in-memory
+    let (cache, quota): (Arc<dyn CacheProvider>, Arc<dyn QuotaProvider>) =
+        if let Some(ref redis_url) = config.redis_url {
+            match redis::Client::open(redis_url.as_str()) {
+                Ok(client) => match client.get_multiplexed_tokio_connection().await {
+                    Ok(conn) => {
+                        tracing::info!("Using Redis for cache and quota");
+                        let c: Arc<dyn CacheProvider> = Arc::new(RedisCache::new(conn.clone()));
+                        let q: Arc<dyn QuotaProvider> = Arc::new(RedisQuota::new(conn, QUOTA_MAX_PER_WINDOW));
+                        (c, q)
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to connect to Redis ({}), falling back to in-memory", e);
+                        fallback_cache_quota(QUOTA_MAX_PER_WINDOW, QUOTA_WINDOW_MINUTES)
+                    }
+                },
+                Err(e) => {
+                    tracing::warn!("Invalid REDIS_URL ({}), falling back to in-memory", e);
+                    fallback_cache_quota(QUOTA_MAX_PER_WINDOW, QUOTA_WINDOW_MINUTES)
+                }
+            }
+        } else {
+            tracing::info!("No REDIS_URL set, using in-memory cache and quota");
+            fallback_cache_quota(QUOTA_MAX_PER_WINDOW, QUOTA_WINDOW_MINUTES)
+        };
 
     let state = Arc::new(AppState {
         http,
@@ -79,7 +106,6 @@ async fn main() {
     });
 
     let api_strict = Router::new()
-        .route("/analyze", post(analyze::handle))
         .route("/message", post(message::handle))
         .route("/enrich", post(enrich_route::handle))
         .route("/quota", get(quota_route::handle))
@@ -92,6 +118,7 @@ async fn main() {
 
     let api_optional = Router::new()
         .route("/scrape", post(scrape::handle))
+        .route("/analyze", post(analyze::handle))
         .route_layer(middleware::from_fn_with_state(
             auth.clone(),
             auth::supabase::optional_auth_middleware,
@@ -124,4 +151,18 @@ async fn main() {
     axum::serve(listener, app)
         .await
         .expect("Server failed");
+}
+
+fn fallback_cache_quota(
+    max_per_window: u32,
+    window_minutes: u64,
+) -> (Arc<dyn CacheProvider>, Arc<dyn QuotaProvider>) {
+    use crate::cache::Cache;
+    use crate::cache::DEFAULT_CACHE_MAX_ENTRIES;
+    use crate::cache::DEFAULT_CACHE_TTL_MINUTES;
+    use crate::quota::QuotaTracker;
+    (
+        Arc::new(Cache::new(DEFAULT_CACHE_TTL_MINUTES, DEFAULT_CACHE_MAX_ENTRIES)),
+        Arc::new(QuotaTracker::new(max_per_window, window_minutes)),
+    )
 }

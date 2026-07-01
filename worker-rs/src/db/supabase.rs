@@ -23,12 +23,13 @@ impl SupabaseClient {
         let mut h = reqwest::header::HeaderMap::new();
         h.insert(
             "apikey",
-            reqwest::header::HeaderValue::from_str(&self.service_key).unwrap(),
+            reqwest::header::HeaderValue::from_str(&self.service_key)
+                .expect("invalid service key header"),
         );
         h.insert(
             "Authorization",
             reqwest::header::HeaderValue::from_str(&format!("Bearer {}", bearer_token))
-                .unwrap(),
+                .expect("invalid bearer token header"),
         );
         h.insert(
             "Content-Type",
@@ -66,7 +67,7 @@ impl SupabaseClient {
         if let Some(ref url) = job.url {
             let update_resp = self
                 .http
-                .patch(format!("{}/rest/v1/jobs?url=eq.{}", self.url, urlencoding(url)))
+                .patch(format!("{}/rest/v1/jobs?url=eq.{}", self.url, urlencoding::encode(url)))
                 .headers(headers.clone())
                 .json(&row)
                 .send()
@@ -241,17 +242,3 @@ impl SupabaseClient {
     }
 }
 
-fn urlencoding(s: &str) -> String {
-    let mut result = String::with_capacity(s.len());
-    for byte in s.bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                result.push(byte as char);
-            }
-            _ => {
-                result.push_str(&format!("%{:02X}", byte));
-            }
-        }
-    }
-    result
-}

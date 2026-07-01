@@ -3,6 +3,8 @@ import type { Job } from "./types";
 export type JobDraft = Omit<Job, "id" | "created_at"> &
   Partial<Pick<Job, "id" | "created_at">>;
 
+const CACHE_TTL_MS = 15 * 60 * 1000;
+
 interface Store {
   jobs: Job[];
   idCounter: number;
@@ -26,9 +28,21 @@ function getState(): Store {
   return globalThis.__linkscout_store;
 }
 
-/** Return a copy of all jobs currently in the in-memory store. */
+/** Return true if the cache was written before TTL and should be considered stale. */
+export function isCacheExpired(): boolean {
+  return Date.now() - getState().lastUpdate > CACHE_TTL_MS;
+}
+
+/** Return a copy of all jobs currently in the in-memory cache. */
 export function getJobs(): Job[] {
   return [...getState().jobs];
+}
+
+/** Clear all cached jobs. */
+export function clearCache(): void {
+  const state = getState();
+  state.jobs = [];
+  state.lastUpdate = Date.now();
 }
 
 function findJobIndex(state: Store, job: JobDraft): number {
@@ -48,7 +62,7 @@ function findJobIndex(state: Store, job: JobDraft): number {
   );
 }
 
-/** Upsert an array of jobs. Existing matches (by id, url, or title+company) are merged. */
+/** Upsert an array of jobs into the in-memory cache. */
 export function addJobs(newJobs: JobDraft[]): Job[] {
   const state = getState();
   const upserted: Job[] = [];
@@ -83,7 +97,7 @@ export function addJobs(newJobs: JobDraft[]): Job[] {
   return upserted;
 }
 
-/** Update a single job's fields by id. Returns the updated job or null if not found. */
+/** Update a single job's fields by id in the in-memory cache. */
 export function updateJob(id: string, fields: Partial<Job>): Job | null {
   const state = getState();
   const idx = state.jobs.findIndex((j) => j.id === id);
@@ -92,7 +106,7 @@ export function updateJob(id: string, fields: Partial<Job>): Job | null {
   return state.jobs[idx];
 }
 
-/** Return aggregate stats (total scraped, unique companies, last update time). */
+/** Return aggregate stats from the in-memory cache. */
 export function getStats() {
   const state = getState();
   const companies = new Set(state.jobs.map((j) => j.company).filter(Boolean));

@@ -13,6 +13,10 @@ const intlMiddleware = createMiddleware({
 
 const SKIP_LOCALE = ["/api/", "/auth/", "/_next/", "/favicon", "/icon.svg", "/apple-icon.svg", "/robots.txt", "/sitemap.xml"];
 
+// Routes API accessibles sans authentification (recherche invitée, etc.)
+// NOTE : /api/auth est déjà exempté séparément (login/signup/callback).
+const PUBLIC_API_ROUTES = ["/api/intent"];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -30,13 +34,17 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── 3. Auth guard (check before intl for redirect decisions) ────────
+  // Le dashboard est accessible aux guests — le gate se fait dans les
+  // composants (favoris, alerts, CV). Seule la page /login redirige
+  // vers /dashboard si déjà connecté.
   const locale = pathname.match(/^\/(en|fr)/)?.[1] || defaultLocale;
   const pathWithoutLocale = pathname.replace(/^\/(en|fr)(\/|$)/, "/$2");
-  const isDashboard = pathWithoutLocale.startsWith("/dashboard");
   const isLogin = pathWithoutLocale === "/login";
 
-  const authRedirect = await checkAuth(request, locale, pathname, isDashboard, isLogin);
-  if (authRedirect) return authRedirect;
+  if (isLogin) {
+    const authRedirect = await checkAuth(request, locale);
+    if (authRedirect) return authRedirect;
+  }
 
   // ── 4. Let next-intl handle locale routing ──────────────────────────
   const intlResponse = intlMiddleware(request);
@@ -47,9 +55,6 @@ export async function middleware(request: NextRequest) {
 async function checkAuth(
   request: NextRequest,
   locale: string,
-  originalPathname: string,
-  isDashboard: boolean,
-  isLogin: boolean,
 ): Promise<NextResponse | null> {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,14 +69,7 @@ async function checkAuth(
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (isDashboard && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/login`;
-    url.searchParams.set("callbackUrl", originalPathname);
-    return NextResponse.redirect(url);
-  }
-
-  if (isLogin && user) {
+  if (user) {
     const cb = request.nextUrl.searchParams.get("callbackUrl");
     const url = request.nextUrl.clone();
     url.pathname = cb || `/${locale}/dashboard`;
@@ -83,7 +81,8 @@ async function checkAuth(
 
 async function handleAuth(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isApiRoute = pathname.startsWith("/api") && !pathname.startsWith("/api/auth");
+  const isPublicApiRoute = pathname.startsWith("/api/auth") || PUBLIC_API_ROUTES.some((route) => pathname.startsWith(route));
+  const isApiRoute = pathname.startsWith("/api") && !isPublicApiRoute;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -105,7 +104,7 @@ async function handleAuth(request: NextRequest) {
     );
   }
 
-  const redirect = await checkAuth(request, "en", pathname, false, false);
+  const redirect = await checkAuth(request, "en");
   if (redirect) return redirect;
 
   const response = NextResponse.next({ request });

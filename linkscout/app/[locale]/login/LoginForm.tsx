@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { GuestCredits } from "@/lib/guest-credits";
+import { GuestSession } from "@/lib/guest-session";
 import Logo from "@/components/Logo";
 import Link from "next/link";
 
@@ -20,6 +22,21 @@ export default function LoginForm() {
       setMode("signup");
     }
   }, [searchParams]);
+
+  const featureGate = searchParams.get("feature") as string | null;
+  const featureMessages: Record<string, string> = {
+    favorites: "Connecte-toi pour sauvegarder tes offres favorites",
+    alerts: "Connecte-toi pour recevoir des alertes Discord/Telegram",
+    history: "Connecte-toi pour retrouver tes recherches précédentes",
+    settings: "Connecte-toi pour personnaliser ton expérience",
+    cv: "Connecte-toi pour uploader ton CV et affiner ton scoring",
+    credits: "Tes 5 analyses gratuites sont épuisées. Connecte-toi pour continuer à analyser des offres sans limite.",
+  };
+  const gateMessage =
+    searchParams.get("from") === "feature_gate" && featureGate
+      ? featureMessages[featureGate] ?? null
+      : null;
+
   const supabase = createClient();
   const isLogin = mode === "login";
 
@@ -50,6 +67,8 @@ export default function LoginForm() {
           console.error("Signup error:", error);
           setMessage({ type: "error", text: error.message });
         } else if (data.session) {
+          GuestCredits.reset();
+          GuestSession.clear();
           const cb = searchParams.get("callbackUrl") || "/dashboard";
           router.push(cb);
           router.refresh();
@@ -63,6 +82,8 @@ export default function LoginForm() {
           console.error("Login error:", error);
           setMessage({ type: "error", text: error.message });
         } else {
+          GuestCredits.reset();
+          GuestSession.clear();
           const cb = searchParams.get("callbackUrl") || "/dashboard";
           router.push(cb);
           router.refresh();
@@ -130,6 +151,12 @@ export default function LoginForm() {
               {isLogin ? "Find the best tech opportunities" : "Join the tech professionals using LinkScout"}
             </p>
           </div>
+
+          {gateMessage && (
+            <div className="mb-5 p-3 rounded-xl text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              {gateMessage}
+            </div>
+          )}
 
           {message && (
             <div className={`mb-5 p-3 rounded-xl text-xs font-medium ${

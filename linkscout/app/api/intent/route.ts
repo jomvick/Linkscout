@@ -3,6 +3,8 @@ import { z } from "zod";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MODEL = "llama-3.3-70b-versatile";
+const GROQ_MAX_RETRIES = 2;
+const GROQ_BASE_DELAY_MS = 500;
 
 const intentInputSchema = z.object({
   text: z.string().trim().min(3, "text doit contenir au moins 3 caractères"),
@@ -59,38 +61,62 @@ Règles:
 - Priorise les termes en anglais car c'est le standard sur LinkedIn.
 - Retourne UNIQUEMENT un JSON valide: { "keywords": ["keyword1", "keyword2"], "intent": "résumé de l'intention en 1 phrase" }`;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    async function callGroq(): Promise<Response> {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const resp = await fetch(GROQ_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: MODEL,
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: text.trim() },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.1,
+            max_tokens: 256,
+          }),
+          signal: controller.signal,
+        });
+        return resp;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
 
-    const resp = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${groqKey}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: text.trim() },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.1,
-        max_tokens: 256,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+    let resp: Response;
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= GROQ_MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        const delay = GROQ_BASE_DELAY_MS * 2 ** (attempt - 1);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+      try {
+        resp = await callGroq();
+        if (resp.ok || !isRetryableStatus(resp.status)) {
+          break;
+        }
+        const body = await resp.text().catch(() => "");
+        console.warn(`Groq intent retry ${attempt}/${GROQ_MAX_RETRIES}: ${resp.status} ${body.slice(0, 200)}`);
+        lastErr = `HTTP ${resp.status}`;
+      } catch (e) {
+        console.warn(`Groq intent retry ${attempt}/${GROQ_MAX_RETRIES}: ${e}`);
+        lastErr = e;
+      }
+    }
 
-    if (!resp.ok) {
-      const errBody = await resp.text();
-      console.error("Groq intent error:", errBody);
-      // Fallback: return the raw text as a single keyword
+    if (!resp!.ok) {
+      console.error("Groq intent error after retries:", lastErr);
       return NextResponse.json({ keywords: [text.trim()], intent: text.trim(), fallback: true });
     }
 
-    const data = await resp.json();
-    const content = data?.choices?.[0]?.message?.content ?? "";
+    const groqData = await resp!.json();
+    const content = groqData?.choices?.[0]?.message?.content ?? "";
 
     let rawParsed: unknown;
     try {
@@ -123,8 +149,11 @@ Règles:
       fallback: false,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("Intent route error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("Intent route error:", err);
+    return NextResponse.json({ error: "Une erreur interne est survenue." }, { status: 500 });
   }
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status < 600);
 }
