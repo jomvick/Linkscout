@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/alerts/trigger",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
