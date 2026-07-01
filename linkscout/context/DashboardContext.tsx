@@ -112,7 +112,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [searching, setSearching] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [currentKeyword, setCurrentKeyword] = useState(query);
-  const [favorites, setFavorites] = useState<Set<string>>(loadFavorites);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isAuthed, setIsAuthed] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [resumeText, setResumeText] = useState("");
@@ -126,6 +126,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const stats = useMemo(() => computeStats(jobs), [jobs]);
 
   useEffect(() => {
+    setFavorites(loadFavorites());
+
     const current = getJobs();
     if (current.length > 0) {
       setJobs(current);
