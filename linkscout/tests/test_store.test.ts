@@ -26,6 +26,8 @@ const makeJob = (overrides: Partial<JobDraft> = {}): JobDraft => ({
   pitch: null,
   score_breakdown: null,
   verdict_ai: null,
+  score_coherence_generale: null,
+  score_coherence_cv: null,
   ...overrides,
 });
 

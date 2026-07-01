@@ -95,13 +95,43 @@ create table if not exists public.user_quota (
     unique (user_id)
 );
 
--- 7. Enable RLS + basic policies
+-- 7. USER SETTINGS
+create table if not exists public.user_settings (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade unique,
+    use_resume_match boolean not null default false,
+    active_resume_id uuid references public.resumes(id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+-- 8. Add new columns to jobs (if not present in initial create)
+alter table public.jobs add column if not exists score_coherence_generale int;
+alter table public.jobs add column if not exists score_coherence_cv int;
+alter table public.jobs add column if not exists notified boolean not null default false;
+
+create index if not exists idx_jobs_notified on public.jobs(notified) where notified = false;
+create index if not exists idx_jobs_score_coherence on public.jobs(score_coherence_cv desc);
+
+-- 9. Enable RLS + basic policies
 alter table public.jobs enable row level security;
 alter table public.collections enable row level security;
 alter table public.alerts enable row level security;
 alter table public.resumes enable row level security;
 alter table public.search_history enable row level security;
 alter table public.user_quota enable row level security;
+alter table public.user_settings enable row level security;
+
+-- user_settings: user owns their data
+create policy "Users can read own settings"
+    on public.user_settings for select
+    using (auth.uid() = user_id);
+create policy "Users can insert own settings"
+    on public.user_settings for insert
+    with check (auth.uid() = user_id);
+create policy "Users can update own settings"
+    on public.user_settings for update
+    using (auth.uid() = user_id);
 
 -- Jobs: everyone can read
 create policy "Jobs are publicly readable"

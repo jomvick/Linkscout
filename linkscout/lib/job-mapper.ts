@@ -65,5 +65,7 @@ export function mapJob(row: JobDraftRecord): Job {
         }
       : null,
     verdict_ai: strOrNull(row.verdict_ai),
+    score_coherence_generale: numOrNull(row.score_coherence_generale),
+    score_coherence_cv: numOrNull(row.score_coherence_cv),
   };
 }

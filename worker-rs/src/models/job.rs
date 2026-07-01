@@ -28,6 +28,8 @@ pub struct JobAnalysis {
     pub remote_policy: Option<String>,
     pub score_breakdown: Option<ScoreBreakdown>,
     pub verdict_ai: String,
+    pub score_coherence_generale: Option<i32>,
+    pub score_coherence_cv: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

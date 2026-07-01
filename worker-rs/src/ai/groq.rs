@@ -1,4 +1,4 @@
-use crate::ai::prompts::{build_analysis_prompt, PITCH_PROMPT};
+use crate::ai::prompts::{build_analysis_prompt, PITCH_PROMPT, Q_AND_A_PROMPT};
 use crate::ai::provider::LlmProvider;
 use crate::models::job::{GeneratedPitch, JobAnalysis, ScoreBreakdown};
 use crate::retry::{with_retry, RetryOutcome};
@@ -195,6 +195,14 @@ impl LlmProvider for GroqProvider {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string(),
+            score_coherence_generale: json
+                .get("score_coherence_generale")
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32),
+            score_coherence_cv: json
+                .get("score_coherence_cv")
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32),
         })
     }
 
@@ -217,6 +225,26 @@ impl LlmProvider for GroqProvider {
             subject: json.get("subject").and_then(|v| v.as_str()).unwrap_or("").to_string(),
             message: json.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string(),
         })
+    }
+
+    async fn answer_question(
+        &self,
+        title: &str,
+        company: &str,
+        description: &str,
+        question: &str,
+    ) -> Option<String> {
+        let user_text = format!(
+            "Titre: {}\nEntreprise: {}\n\nDescription:\n{}\n\nQuestion: {}",
+            title,
+            company,
+            &description[..description.len().min(MAX_ANALYSIS_DESCRIPTION_CHARS)],
+            question,
+        );
+
+        let json = self.call(Q_AND_A_PROMPT, &user_text, true, 0.3, 512).await?;
+
+        json.get("answer").and_then(|v| v.as_str()).map(String::from)
     }
 }
 

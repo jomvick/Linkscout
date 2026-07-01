@@ -11,10 +11,20 @@ interface JobsResponse {
   degraded: boolean;
 }
 
+function computeWeightedScore(job: Job): number {
+  const gen = job.score_coherence_generale;
+  const cv = job.score_coherence_cv;
+  if (gen !== null && cv !== null) return gen * 0.3 + cv * 0.7;
+  if (gen !== null) return gen;
+  if (cv !== null) return cv;
+  return job.match_score ?? 0;
+}
+
 /** Return jobs, optionally filtered by keyword. degraded=true when served from memory cache. */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const keyword = searchParams.get("keyword")?.trim() || null;
+  const useResumeMatch = searchParams.get("use_resume_match") === "true";
 
   try {
     const supabase = await createClient();
@@ -29,7 +39,10 @@ export async function GET(request: NextRequest) {
       .limit(100);
 
     if (!error && data) {
-      const jobs = data.map((row) => mapJob(row as Record<string, unknown>));
+      let jobs = data.map((row) => mapJob(row as Record<string, unknown>));
+      if (useResumeMatch) {
+        jobs = jobs.sort((a, b) => computeWeightedScore(b) - computeWeightedScore(a));
+      }
       return NextResponse.json({ jobs, degraded: false } satisfies JobsResponse);
     }
 
@@ -43,6 +56,9 @@ export async function GET(request: NextRequest) {
           j.company.toLowerCase().includes(kw),
       );
     }
+    if (useResumeMatch) {
+      allJobs = allJobs.sort((a, b) => computeWeightedScore(b) - computeWeightedScore(a));
+    }
     return NextResponse.json({ jobs: allJobs, degraded: true } satisfies JobsResponse);
   } catch (err) {
     console.error("[Jobs] GET error:", err);
@@ -54,6 +70,9 @@ export async function GET(request: NextRequest) {
           j.title.toLowerCase().includes(kw) ||
           j.company.toLowerCase().includes(kw),
       );
+    }
+    if (useResumeMatch) {
+      allJobs = allJobs.sort((a, b) => computeWeightedScore(b) - computeWeightedScore(a));
     }
     return NextResponse.json({ jobs: allJobs, degraded: true } satisfies JobsResponse);
   }

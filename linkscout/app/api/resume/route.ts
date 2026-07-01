@@ -80,20 +80,19 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
-    .from("resumes")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const [resumeResult, settingsResult] = await Promise.all([
+    supabase.from("resumes").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase.from("user_settings").select("use_resume_match, active_resume_id").eq("user_id", user.id).maybeSingle(),
+  ]);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (resumeResult.error) {
+    return NextResponse.json({ error: resumeResult.error.message }, { status: 500 });
   }
 
   return NextResponse.json({
     success: true,
-    resume: data || null,
-    settings: { use_resume_match: false, active_resume_id: null },
+    resume: resumeResult.data || null,
+    settings: settingsResult.data || { use_resume_match: false, active_resume_id: null },
   });
 }
 

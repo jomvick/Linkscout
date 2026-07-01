@@ -25,6 +25,8 @@ export interface Job {
   pitch: string | null;
   score_breakdown: ScoreBreakdown | null;
   verdict_ai: string | null;
+  score_coherence_generale: number | null;
+  score_coherence_cv: number | null;
 }
 
 export interface SearchHistory {

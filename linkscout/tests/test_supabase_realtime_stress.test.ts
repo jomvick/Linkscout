@@ -32,6 +32,8 @@ function makeJob(overrides: Partial<JobDraft> & { id: string }): JobDraft {
     pitch: null,
     score_breakdown: null,
     verdict_ai: null,
+    score_coherence_generale: null,
+    score_coherence_cv: null,
     ...overrides,
   };
 }

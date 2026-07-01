@@ -136,6 +136,8 @@ impl SupabaseClient {
             "match_score": analysis.match_score,
             "score_breakdown": analysis.score_breakdown,
             "verdict_ai": analysis.verdict_ai,
+            "score_coherence_generale": analysis.score_coherence_generale,
+            "score_coherence_cv": analysis.score_coherence_cv,
             "status": "enriched",
         });
 

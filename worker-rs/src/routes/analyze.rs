@@ -20,6 +20,7 @@ pub struct AnalyzeRequest {
     keyword: Option<String>,
     resume_text: Option<String>,
     job_id: Option<String>,
+    question: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -33,6 +34,9 @@ pub struct AnalyzeResponse {
     cached: Option<bool>,
     /// true si l'utilisateur n'était pas connecté (pas de persistance DB)
     guest: bool,
+    /// Réponse à une question spécifique (Q&A mode)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    answer: Option<String>,
 }
 
 pub async fn handle(
@@ -44,6 +48,53 @@ pub async fn handle(
     let description = &req.description;
     let keyword = req.keyword.as_deref().unwrap_or("");
     let resume_text = req.resume_text.as_deref().unwrap_or("");
+    let question = req.question.as_deref();
+
+    // Q&A mode : pas de cache, quota réduit (guest gratuit)
+    if let Some(q) = question {
+        let provider = GroqProvider::new(
+            state.http.clone(),
+            state.config.groq_api_key.clone(),
+        );
+
+        let answer = provider
+            .answer_question(
+                req.title.as_deref().unwrap_or(""),
+                req.company.as_deref().unwrap_or(""),
+                description,
+                q,
+            )
+            .await;
+
+        let quota_info = if !is_guest {
+            let user = maybe_user.as_ref().unwrap();
+            let _ = state.quota.check_and_increment(&user.id).await;
+            Some(state.quota.peek(&user.id).await)
+        } else {
+            None
+        };
+
+        return match answer {
+            Some(a) => Ok(Json(AnalyzeResponse {
+                success: true,
+                analysis: None,
+                error: None,
+                quota: quota_info,
+                cached: None,
+                guest: is_guest,
+                answer: Some(a),
+            })),
+            None => Ok(Json(AnalyzeResponse {
+                success: false,
+                analysis: None,
+                error: Some("Q&A analysis failed".into()),
+                quota: quota_info,
+                cached: None,
+                guest: is_guest,
+                answer: None,
+            })),
+        };
+    }
 
     // Guest : pas de cache ni de quota, appel direct
     if is_guest {
@@ -70,6 +121,7 @@ pub async fn handle(
                 quota: None,
                 cached: None,
                 guest: true,
+                answer: None,
             })),
             None => Ok(Json(AnalyzeResponse {
                 success: false,
@@ -78,6 +130,7 @@ pub async fn handle(
                 quota: None,
                 cached: None,
                 guest: true,
+                answer: None,
             })),
         };
     }
@@ -95,6 +148,7 @@ pub async fn handle(
                 quota: Some(state.quota.peek(&user.id).await),
                 cached: Some(true),
                 guest: false,
+                answer: None,
             }));
         }
     }
@@ -142,6 +196,7 @@ pub async fn handle(
                 quota: Some(quota_info),
                 cached: Some(false),
                 guest: false,
+                answer: None,
             }))
         }
         None => Ok(Json(AnalyzeResponse {
@@ -151,6 +206,7 @@ pub async fn handle(
             quota: Some(quota_info),
             cached: None,
             guest: false,
+            answer: None,
         })),
     }
 }

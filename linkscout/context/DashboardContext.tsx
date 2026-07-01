@@ -536,6 +536,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
             remote_policy: (row.remote_policy as string) || null,
             seniority: (row.seniority as string) || null,
             pitch: (row.pitch as string) || null,
+            score_coherence_generale:
+              typeof row.score_coherence_generale === "number"
+                ? row.score_coherence_generale
+                : null,
+            score_coherence_cv:
+              typeof row.score_coherence_cv === "number"
+                ? row.score_coherence_cv
+                : null,
           };
           addJobs([job]);
           setJobs(getJobs());
@@ -578,6 +586,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
             remote_policy: (row.remote_policy as string) || null,
             seniority: (row.seniority as string) || null,
             pitch: (row.pitch as string) || null,
+            score_coherence_generale:
+              typeof row.score_coherence_generale === "number"
+                ? row.score_coherence_generale
+                : null,
+            score_coherence_cv:
+              typeof row.score_coherence_cv === "number"
+                ? row.score_coherence_cv
+                : null,
           };
           addJobs([job]);
           setJobs(getJobs());

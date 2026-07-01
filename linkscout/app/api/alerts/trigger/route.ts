@@ -1,7 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const DEFAULT_MIN_SCORE = 70;
+
+function requireInternalKey(request: NextRequest): Response | null {
+  const key = request.headers.get("x-internal-key") || request.headers.get("INTERNAL_API_KEY");
+  if (!key || key !== process.env.INTERNAL_API_KEY) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
 
 function isRemoteJob(job: Record<string, unknown>): boolean {
   const loc = ((job.location as string) ?? "").toLowerCase();
@@ -77,7 +85,10 @@ async function sendTelegram(webhookUrl: string, job: Record<string, unknown>) {
 }
 
 /** Evaluate all active alerts and send Discord/Telegram notifications for matching jobs. */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const authErr = requireInternalKey(request);
+  if (authErr) return authErr;
+
   const supabase = createServiceClient();
   if (!supabase) {
     return NextResponse.json({ error: "Service client not configured" }, { status: 500 });
@@ -107,10 +118,13 @@ export async function POST() {
       .select("*")
       .or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%`)
       .gte("match_score", alert.min_score ?? DEFAULT_MIN_SCORE)
-      .order("created_at", { ascending: false })
+      .is("notified", false)
+      .order("match_score", { ascending: false })
       .limit(5);
 
     if (!jobs?.length) continue;
+
+    const sentJobIds: string[] = [];
 
     for (const job of jobs) {
       const jobRecord = job as Record<string, unknown>;
@@ -124,7 +138,10 @@ export async function POST() {
         } else if (alert.platform === "telegram") {
           ok = await sendTelegram(alert.webhook_url, jobRecord);
         }
-        if (ok) totalSent++;
+        if (ok) {
+          totalSent++;
+          sentJobIds.push(jobRecord.id as string);
+        }
       } catch {
         errors.push(`Failed to send ${alert.platform} for alert ${alert.id}`);
       }
@@ -142,6 +159,11 @@ export async function POST() {
           // Non-critical — alert was already sent
         }
       }
+    }
+
+    // Mark sent jobs as notified
+    if (sentJobIds.length > 0) {
+      await supabase.from("jobs").update({ notified: true }).in("id", sentJobIds);
     }
 
     await supabase

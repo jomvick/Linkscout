@@ -19,4 +19,12 @@ pub trait LlmProvider: Send + Sync {
         company: &str,
         description: &str,
     ) -> Option<GeneratedPitch>;
+
+    async fn answer_question(
+        &self,
+        title: &str,
+        company: &str,
+        description: &str,
+        question: &str,
+    ) -> Option<String>;
 }
