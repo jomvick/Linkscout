@@ -35,6 +35,7 @@ export default function ResultCard({
   onToggleFavorite,
 }: ResultCardProps) {
   const techStack = job.tech_stack ?? [];
+  const isAiReady = job.match_score !== null;
 
   const handleCardKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     triggerOnActivationKey(e, onClick);
@@ -92,7 +93,14 @@ export default function ResultCard({
                 isFavorite={isFavorite}
                 onToggle={onToggleFavorite}
               />
-              <MatchScore score={job.match_score} />
+              {isAiReady ? (
+                <MatchScore score={job.match_score} />
+              ) : job.description ? (
+                <span className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-canvas px-1.5 py-0.5 text-[10px] font-medium text-text-secondary/60 animate-pulse">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  IA...
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -179,7 +187,7 @@ export default function ResultCard({
       )}
 
       {/* Affichage auto de l'IA */}
-      {(job.score_breakdown || job.verdict_ai) && (
+      {(job.score_breakdown || job.verdict_ai || job.score_coherence_generale !== null) && (
         <div className="mt-3 border-t border-border/40 pt-3 space-y-2">
           {job.score_breakdown && (
             <div className="flex items-center gap-3 text-[10px] font-medium text-text-secondary/80 flex-wrap">
@@ -199,6 +207,22 @@ export default function ResultCard({
                 <span className="flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   Exp: {job.score_breakdown.seniority_match}%
+                </span>
+              )}
+            </div>
+          )}
+          {(job.score_coherence_generale !== null || job.score_coherence_cv !== null) && (
+            <div className="flex items-center gap-3 text-[10px] font-medium text-text-secondary/80 flex-wrap">
+              {job.score_coherence_generale !== null && (
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                  Marché: {job.score_coherence_generale}%
+                </span>
+              )}
+              {job.score_coherence_cv !== null && (
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  CV: {job.score_coherence_cv}%
                 </span>
               )}
             </div>

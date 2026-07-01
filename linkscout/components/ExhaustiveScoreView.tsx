@@ -6,6 +6,8 @@ interface ExhaustiveScoreViewProps {
   breakdown: ScoreBreakdown;
   matchScore: number;
   verdictAi: string | null;
+  scoreCoherenceGenerale?: number | null;
+  scoreCoherenceCv?: number | null;
 }
 
 function Gauge({
@@ -39,6 +41,8 @@ export default function ExhaustiveScoreView({
   breakdown,
   matchScore,
   verdictAi,
+  scoreCoherenceGenerale,
+  scoreCoherenceCv,
 }: ExhaustiveScoreViewProps) {
   const hasAnyBreakdown =
     breakdown.keyword_alignment !== null ||
@@ -89,6 +93,28 @@ export default function ExhaustiveScoreView({
                 label="Niveau d'expérience & Séniorité"
                 value={breakdown.seniority_match}
                 color="bg-cyan-500"
+              />
+            )}
+          </div>
+        </>
+      )}
+
+      {(scoreCoherenceGenerale !== null || scoreCoherenceCv !== null) && (
+        <>
+          <div className="h-px bg-slate-100 dark:bg-slate-900" />
+          <div className="space-y-3">
+            {scoreCoherenceGenerale != null && (
+              <Gauge
+                label="Cohérence Offre & Marché"
+                value={scoreCoherenceGenerale!}
+                color="bg-slate-500"
+              />
+            )}
+            {scoreCoherenceCv != null && (
+              <Gauge
+                label="Match précis avec ton CV"
+                value={scoreCoherenceCv!}
+                color="bg-blue-500"
               />
             )}
           </div>

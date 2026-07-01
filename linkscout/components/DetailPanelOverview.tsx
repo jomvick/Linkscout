@@ -42,6 +42,8 @@ export default function DetailPanelOverview({ job, analyzing, onAnalyze }: Props
           breakdown={job.score_breakdown}
           matchScore={job.match_score}
           verdictAi={job.verdict_ai}
+          scoreCoherenceGenerale={job.score_coherence_generale}
+          scoreCoherenceCv={job.score_coherence_cv}
         />
       )}
       {job.match_score != null && !job.score_breakdown && (

@@ -236,6 +236,8 @@ export default function DashboardClient() {
             seniority: a.seniority || null,
             location: a.location || null,
             status: a.status || "enriched",
+            score_coherence_generale: a.score_coherence_generale ?? null,
+            score_coherence_cv: a.score_coherence_cv ?? null,
           });
           refreshStats();
           setSelected(getJobs().find((j) => j.id === job.id) || selected);
