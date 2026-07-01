@@ -104,6 +104,15 @@ async function handleAuth(request: NextRequest) {
     );
   }
 
+  // Ne pas rediriger les routes API (même les publiques) — checkAuth
+  // renverrait une 302 vers /dashboard pour les utilisateurs connectés,
+  // ce qui casserait les appels fetch côté client (body HTML au lieu de JSON).
+  if (pathname.startsWith("/api")) {
+    const response = NextResponse.next({ request });
+    addSecurityHeaders(response);
+    return response;
+  }
+
   const redirect = await checkAuth(request, "en");
   if (redirect) return redirect;
 

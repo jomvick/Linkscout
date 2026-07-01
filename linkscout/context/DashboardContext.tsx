@@ -307,13 +307,25 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(
         `/api/jobs${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ""}`,
       );
-      if (res.ok) {
-        const body = await res.json();
-        const jobs = Array.isArray(body) ? body : body.jobs;
-        if (Array.isArray(jobs) && jobs.length > 0) {
-          addJobs(jobs as JobDraft[]);
-          setJobs(getJobs());
-          if (cacheKey && !body.degraded) cacheStore.setSession(cacheKey, getJobs(), 15);
+      if (!res.ok) return;
+
+      const text = await res.text();
+      if (!text.trim()) return;
+
+      let body: { jobs?: JobDraft[]; degraded?: boolean } | JobDraft[];
+      try {
+        body = JSON.parse(text);
+      } catch (err) {
+        console.error("Rehydration failed:", err, text.slice(0, 200));
+        return;
+      }
+
+      const jobs = Array.isArray(body) ? body : body.jobs;
+      if (Array.isArray(jobs) && jobs.length > 0) {
+        addJobs(jobs as JobDraft[]);
+        setJobs(getJobs());
+        if (cacheKey && !Array.isArray(body) && !body.degraded) {
+          cacheStore.setSession(cacheKey, getJobs(), 15);
         }
       }
     } catch (err) {

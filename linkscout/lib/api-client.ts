@@ -16,6 +16,20 @@ function str(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
+async function parseJsonBody<T>(res: Response, tag: string): Promise<T | null> {
+  const text = await res.text();
+  if (!text.trim()) {
+    console.error(`[${tag}] Empty response (HTTP ${res.status})`);
+    return null;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    console.error(`[${tag}] Invalid JSON (${text.length} chars):`, text.slice(0, 300));
+    return null;
+  }
+}
+
 export interface ScrapeResult {
   success: boolean;
   keyword: string;
@@ -38,18 +52,17 @@ export async function apiScrape(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    console.error(`[apiScrape] HTTP ${res.status}: ${text.slice(0, 300)}`);
-    return { success: false, keyword, jobs: [], error: `HTTP ${res.status}` };
+    const errBody = await parseJsonBody<{ error?: string }>(res, "apiScrape");
+    const detail = errBody?.error ?? `HTTP ${res.status}`;
+    console.error(`[apiScrape] HTTP ${res.status}: ${detail}`);
+    return { success: false, keyword, jobs: [], error: detail };
   }
 
-  try {
-    return await res.json();
-  } catch {
-    const text = await res.text().catch(() => "");
-    console.error(`[apiScrape] Invalid JSON (${text.length} chars):`, text.slice(0, 300));
+  const data = await parseJsonBody<ScrapeResult>(res, "apiScrape");
+  if (!data) {
     return { success: false, keyword, jobs: [], error: "Réponse invalide du service de scraping" };
   }
+  return data;
 }
 
 // ── Natural language intent → LinkedIn search keywords ────────────────────────
@@ -176,17 +189,16 @@ export async function apiAnalyze(params: {
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    console.error(`[apiAnalyze] HTTP ${res.status}: ${text.slice(0, 300)}`);
-    return { success: false, error: `HTTP ${res.status}` };
+    const errBody = await parseJsonBody<{ error?: string }>(res, "apiAnalyze");
+    const detail = errBody?.error ?? `HTTP ${res.status}`;
+    console.error(`[apiAnalyze] HTTP ${res.status}: ${detail}`);
+    return { success: false, error: detail };
   }
 
-  try {
-    return await res.json();
-  } catch {
-    const text = await res.text().catch(() => "");
-    console.error(`[apiAnalyze] Invalid JSON (${text.length} chars):`, text.slice(0, 300));
+  const data = await parseJsonBody<AnalyzeResult>(res, "apiAnalyze");
+  if (!data) {
     return { success: false, error: "Réponse invalide du service d'analyse" };
   }
+  return data;
 }
 
