@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 
-const WORKER = process.env.NEXT_PUBLIC_WORKER_URL || "http://localhost:8001";
+const WORKER = "/api/worker";
 
 async function authHeaders(): Promise<Record<string, string>> {
   const supabase = createClient();

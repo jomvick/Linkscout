@@ -19,6 +19,15 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  async rewrites() {
+    return [
+      {
+        source: "/api/worker/:path*",
+        destination: `${process.env.NEXT_PUBLIC_WORKER_URL || "https://linkscout-vfkm.onrender.com"}/:path*`,
+      },
+    ];
+  },
+
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
