@@ -325,6 +325,22 @@ export default function DashboardClient() {
     }
   }, [filteredJobs, isAuthed]);
 
+  const prevListRef = useRef<string[]>([]);
+  useEffect(() => {
+    const ids = sortedJobs.map((j) => j.id);
+    const listChanged = ids.length !== prevListRef.current.length ||
+      ids.some((id, i) => id !== prevListRef.current[i]);
+    if (!listChanged) return;
+    prevListRef.current = ids;
+
+    if (sortedJobs.length > 0) {
+      const stillInList = selected && sortedJobs.some((j) => j.id === selected.id);
+      if (!stillInList) setSelected(sortedJobs[0]);
+    } else {
+      setSelected(null);
+    }
+  }, [sortedJobs]);
+
   const renderView = () => {
     switch (view) {
       case "dashboard":
