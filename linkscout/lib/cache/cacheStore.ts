@@ -35,7 +35,7 @@ export const cacheStore = {
       }
       return data.value;
     } catch (error) {
-      console.error(`[Cache] Parse error for key ${key}:`, error);
+      console.error("[Cache] Parse error for key %s: %O", key, error);
       return null;
     }
   },

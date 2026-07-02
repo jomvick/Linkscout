@@ -53,7 +53,7 @@ export function withApiHandler<T = unknown>(
         );
       }
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[${tag}] Unhandled error:`, msg);
+      console.error("[%s] Unhandled error: %s", tag, msg);
       return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
     }
   };

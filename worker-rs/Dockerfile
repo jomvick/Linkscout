@@ -7,6 +7,8 @@ RUN cargo build --release --locked
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN groupadd -r app && useradd -r -g app -d /usr/local/bin -s /sbin/nologin app
 COPY --from=builder /app/target/release/linkscout-worker /usr/local/bin/linkscout-worker
 EXPOSE 8001
+USER app
 CMD ["linkscout-worker"]

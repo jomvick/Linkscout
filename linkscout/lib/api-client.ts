@@ -25,7 +25,7 @@ async function parseJsonBody<T>(res: Response, tag: string): Promise<T | null> {
   try {
     return JSON.parse(text) as T;
   } catch {
-    console.error(`[${tag}] Invalid JSON (${text.length} chars):`, text.slice(0, 300));
+    console.error("[%s] Invalid JSON (%d chars): %s", tag, text.length, text.slice(0, 300));
     return null;
   }
 }

@@ -90,7 +90,7 @@ async function proxyWorker(
     const isAbort = err instanceof Error && err.name === "AbortError";
     const message =
       err instanceof Error ? err.message : "Erreur inconnue";
-    console.error(`[worker-proxy] ${targetPath} failed:`, message);
+    console.error("[worker-proxy] %s failed: %s", targetPath, message);
 
     return NextResponse.json(
       {

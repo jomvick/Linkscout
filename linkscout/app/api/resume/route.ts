@@ -140,7 +140,7 @@ async function notifyWorkerWithRetry(
       const text = await res.text().catch(() => "");
       console.warn(`[Resume] Worker notify attempt ${attempt + 1} failed (${res.status}): ${text.slice(0, 200)}`);
     } catch (err) {
-      console.warn(`[Resume] Worker notify attempt ${attempt + 1} error:`, err);
+      console.warn("[Resume] Worker notify attempt %d error: %O", attempt + 1, err);
     }
     if (attempt < maxRetries - 1) {
       await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
